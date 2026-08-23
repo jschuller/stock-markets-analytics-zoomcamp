@@ -27,15 +27,16 @@
 
 ## Taking the course
 
-### 2025 Cohort
+### 2026 Cohort
 
-* **Start**: 19 May 2025 (Monday) at 6:30pm GMT +1 (Dublin time)
-* **LiveStream**: all modules will be streamed on the PythonInvest YouTube Channel: [2025 Stock Market Analytics Zoomcamp Playlist](https://www.youtube.com/playlist?list=PLSWnIAnueyu8KBcwhE48ASp20nZMg2qtt)
-* **Registration Form**: [LINK](https://forms.gle/qP19FoBSnzmZsJYt6)
-* [Cohort folder](cohorts/2025/) with homeworks and deadlines
+* **Start**: 24 August 2026 (Monday) at 4pm GMT +1 (Dublin time)
+* **LiveStream**: all modules will be streamed on the PythonInvest YouTube Channel and added to this playlist: [2026 Stock Market Analytics Zoomcamp Playlist](https://www.youtube.com/playlist?list=PLAlZmugkCNtk)
+* **Registration Form on the Page**: [\[2026 course\]](https://pythoninvest.com/course)
+* [Cohort folder](cohorts/2026/) with homeworks and deadlines
 
-* **Pre-Launch stream with course overview and Q&A (streamed on April, 14th 2025)**:
-  * [![[Pre-Launch and Q&A] Stock Market Analytics Zoomcamp 2025](https://markdown-videos-api.jorgenkh.no/url?url=https%3A%2F%2Fwww.youtube.com%2Fwatch%3Fv%3D1N1jIwa1uag)](https://www.youtube.com/watch?v=1N1jIwa1uag)
+* **Pre-Launch stream with course overview and Q&A (streamed on August, 17th 2026**:
+  * [![[Pre-Launch and Q&A] Stock Market Analytics Zoomcamp 2026](https://markdown-videos-api.jorgenkh.no/youtube/Qph4w_WYECc?width=320&height=180&filetype=jpeg
+  )](https://www.youtube.com/watch?v=Qph4w_WYECc&list=PLAlZmugkCNtk&index=4)
 
 
 * **Workshops to help you prepare for the course**
@@ -43,6 +44,9 @@
 
 
   * [![Predicting Financial Time-Series](https://markdown-videos-api.jorgenkh.no/url?url=https%3A%2F%2Fwww.youtube.com%2Fwatch%3Fv%3DPxAh08Pcmj4)](https://www.youtube.com/watch?v=PxAh08Pcmj4)
+
+
+  * [![Building an AI Stock Research Agent](https://markdown-videos-api.jorgenkh.no/youtube/MdZLf6C5rW8?width=320&height=180&filetype=jpeg)](https://www.youtube.com/watch?v=MdZLf6C5rW8)
 
 
 * **Supplementary pre-read for the project selection:**
@@ -62,7 +66,19 @@
      * [The Unlucky Investor's Guide to Options Trading](https://www.amazon.co.uk/Unlucky-Investor%E2%80%B2s-Guide-Options-Trading/dp/1119882656)
 
 ---
+### 2025 Cohort
+
+* **Start**: 19 May 2025 (Monday) at 6:30pm GMT +1 (Dublin time)
+* **LiveStream**: all modules were streamed on the PythonInvest YouTube Channel: [2025 Stock Market Analytics Zoomcamp Playlist](https://www.youtube.com/playlist?list=PLSWnIAnueyu8KBcwhE48ASp20nZMg2qtt)
+* **Registration Form** (not accepting responses anymore): [LINK](https://forms.gle/qP19FoBSnzmZsJYt6)
+* [Cohort folder](cohorts/2025/) with homeworks and deadlines
+
+* **Pre-Launch stream with course overview and Q&A (streamed on April, 14th 2025)**:
+  * [![[Pre-Launch and Q&A] Stock Market Analytics Zoomcamp 2025](https://markdown-videos-api.jorgenkh.no/url?url=https%3A%2F%2Fwww.youtube.com%2Fwatch%3Fv%3D1N1jIwa1uag)](https://www.youtube.com/watch?v=1N1jIwa1uag)
+
+---
 ### 2024 Cohort
+
 
 * **Start**: 15 April 2024 (Monday) at 17:00 GMT
 * **Registration Form** (not accepting responses anymore): [LINK](https://docs.google.com/forms/d/e/1FAIpQLSc5H6Jc-HJg9B7irveRASJCAS4BTnJcvM2QX2ykIGZ0UNgCPQ/viewform)

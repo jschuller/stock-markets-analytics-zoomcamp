@@ -37,7 +37,15 @@ jobs:
     steps:
       - uses: actions/checkout@fbc6f3992d24b796d5a048ff273f7fcc4a7b6c09 # v5
 
+      # Pin the CLI, do not take latest. setup-cli's default installs whatever is
+      # newest, and a newer CLI requests a newer databricks/databricks provider —
+      # 1.129.0, whose signature the bundled OpenTofu rejects with "authentication
+      # signature from unknown issuer", failing `terraform init` after the files
+      # have already uploaded. 0.280.0 requests 1.99.0, which is what runs locally.
+      # Bump this deliberately, together with the local CLI, never implicitly.
       - uses: databricks/setup-cli@6bb7075f85b326f8b9ce160933dfe9bcd63c8121 # v1.13.0
+        with:
+          version: 0.280.0
 
       - name: Deploy
         run: databricks bundle deploy -t free-edition

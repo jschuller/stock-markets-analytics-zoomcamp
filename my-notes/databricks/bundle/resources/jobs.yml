@@ -74,3 +74,25 @@ resources:
               start_date: "1950-01-01"
               mode: replace_source
               groups: all
+
+    crosscheck_bronze:
+      name: "[SMA] Cross-check Homework 1 against ${var.catalog}.bronze"
+      description: >-
+        Answers Homework 1 Q2 and Q3 from bronze.ohlcv_daily and asserts they
+        match what homework1.ipynb got from live yfinance. Returns JSON with
+        "ok": true/false. Q1 and Q4 are not answerable from bronze and the
+        notebook says so rather than skipping them silently.
+
+        No environments: block on purpose — reading Delta needs nothing beyond
+        the serverless base image.
+      max_concurrent_runs: 1
+      tasks:
+        - task_key: crosscheck
+          notebook_task:
+            notebook_path: ../src/06_crosscheck_bronze.py
+            base_parameters:
+              catalog: ${var.catalog}
+              q2_start: "2026-01-01"
+              q2_end: "2026-08-21"
+              expect_q2: "2"
+              expect_q3: "7.99"

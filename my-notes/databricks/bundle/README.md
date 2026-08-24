@@ -113,8 +113,10 @@ project      VOLUME exports/
 | `databricks.yml` | bundle name, variables, targets |
 | `resources/schemas.yml` | 6 schemas + grants |
 | `resources/volumes.yml` | 3 volumes + grants |
-| `resources/jobs.yml` | `bootstrap_tables`, `verify_layout` |
+| `resources/jobs.yml` | `bootstrap_tables`, `verify_layout`, `ingest_bronze`, `crosscheck_bronze` |
 | `src/03_create_layout.py` | table DDL only — schemas/volumes belong to the bundle |
+| `src/05_ingest_bronze.py` | fills the bronze tables from yfinance + FRED; idempotent |
+| `src/06_crosscheck_bronze.py` | re-answers Homework 1 Q2/Q3 from Delta and asserts they match |
 | `src/04_verify_layout.py` | assertions incl. column names and types |
 | `src/0[0-2]_*.py` | egress and environment probes |
 

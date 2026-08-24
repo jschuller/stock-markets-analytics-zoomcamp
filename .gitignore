@@ -1,0 +1,17 @@
+# macOS
+.DS_Store
+
+# Personal study material: large binaries and regenerable derivatives.
+# Kept on disk under my-notes/, deliberately out of git history.
+my-notes/**/slides/
+my-notes/**/pdfs/
+my-notes/archive/
+
+# Python
+__pycache__/
+*.py[cod]
+.ipynb_checkpoints/
+.venv/
+
+# Secrets
+.env

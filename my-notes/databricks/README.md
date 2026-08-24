@@ -142,6 +142,7 @@ PRs, deploy + verify on merge to main.
 | `bundle/src/02_final_probe.py` | real gdown IDs, pandas upgrade, TF traceback, writable paths |
 | `bundle/src/03_create_layout.py` | table DDL, run by the bundle's `bootstrap_tables` job |
 | `bundle/src/04_verify_layout.py` | assertions incl. column names and types; CI gate |
+| `bundle/src/05_ingest_bronze.py` | fills the three bronze tables, run by the `ingest_bronze` job |
 
 All return results via `dbutils.notebook.exit(json.dumps(...))` — `print()` output does
 not come back through the Jobs API. Run one ad hoc with `./run_notebook.sh <file.py>`,
@@ -163,6 +164,40 @@ cd my-notes/databricks
 ./run_notebook.sh 00_egress_probe.py        # default base environment
 ./run_notebook.sh 01_env_probe.py 3         # pin serverless client version 3
 ```
+
+## Loading data
+
+`ingest_bronze` fills `bronze.ohlcv_daily`, `bronze.macro_series` and `bronze.tickers`
+from yfinance and FRED — 190 US large caps, 14 indexes, 2 ETFs, 3 commodities, BTC, and
+17 FRED series, from 1950 where the history exists. About 3 minutes for ~2M rows.
+
+```bash
+databricks bundle run ingest_bronze -t free-edition
+```
+
+It is **idempotent**: `mode=replace_source` deletes this source's rows before writing, so
+re-running reloads rather than doubling. Bronze is append-only *across* sources — the same
+`(ticker, date)` from a second provider is expected and `silver` resolves it — but never
+within one. Run a slice with `groups`:
+
+```bash
+databricks bundle run ingest_bronze -t free-edition -- --groups macro,tickers
+```
+
+The job carries a **paused** daily schedule (06:30 America/New_York); unpause it in
+`resources/jobs.yml` when Module 5 needs a live pipeline. It is also the bundle's first
+job with an `environments:` block, which is how `yfinance` and `pandas-datareader` reach
+serverless without a `%pip` cell.
+
+`bronze.tickers` enrichment comes from `global_stocks.csv` on the volume — a one-time
+upload, not part of bundle sync:
+
+```bash
+databricks fs cp my-notes/01-intro/data/global_stocks.csv \
+  dbfs:/Volumes/stock_analytics/bronze/files/global_stocks.csv --overwrite
+```
+
+Missing file means null market caps, not a failed run.
 
 It resolves the calling identity via `current-user me` rather than hardcoding an
 id, and pretty-prints the JSON the notebook returns.

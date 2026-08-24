@@ -34,3 +34,43 @@ resources:
             notebook_path: ../src/04_verify_layout.py
             base_parameters:
               catalog: ${var.catalog}
+
+    ingest_bronze:
+      name: "[SMA] Ingest Module 1 data into ${var.catalog}.bronze"
+      description: >-
+        Fills bronze.ohlcv_daily (yfinance), bronze.macro_series (FRED) and
+        bronze.tickers. Idempotent: mode=replace_source clears this source's
+        rows first, so re-running reloads rather than duplicating.
+      max_concurrent_runs: 1
+
+      # First environments: block in this bundle. yfinance and pandas-datareader
+      # are not on the serverless base image, and declaring them here keeps the
+      # dependency set in version control and visible in `bundle plan` — better
+      # than a %pip cell that only the notebook knows about.
+      environments:
+        - environment_key: default
+          spec:
+            client: "3"
+            dependencies:
+              - yfinance
+              - pandas-datareader==0.10.0
+
+      # First schedule: in this bundle, and deliberately PAUSED. Module 5 will
+      # want a daily refresh; declaring the intent now costs nothing, and paused
+      # means nothing fires until it is asked to. GitHub deploys, Databricks
+      # schedules — see ../../../../.github/workflows/README.md.
+      schedule:
+        quartz_cron_expression: "0 30 6 * * ?"
+        timezone_id: America/New_York
+        pause_status: PAUSED
+
+      tasks:
+        - task_key: ingest
+          environment_key: default
+          notebook_task:
+            notebook_path: ../src/05_ingest_bronze.py
+            base_parameters:
+              catalog: ${var.catalog}
+              start_date: "1950-01-01"
+              mode: replace_source
+              groups: all

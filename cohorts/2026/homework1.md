@@ -1,18 +1,18 @@
 ## Module 1 Homework (2026 cohort)
 
-In this homework, we're going to download finance data from various sources and make simple calculations or analysis.
+In this homework, we're going to download financial data from various sources and perform simple calculations and analysis.
 
 ---
 ### Question 1: [Index] S&P 500 Stocks Added to the Index
 
-**Which year had the highest number of additions?**
+**Which year had the highest number of additions (starting from 2020)?**
 
 Using the list of S&P 500 companies from Wikipedia's [S&P 500 companies page](https://en.wikipedia.org/wiki/List_of_S%26P_500_companies), download the data including the year each company was added to the index.
 
 Hint: you can use [pandas.read_html](https://pandas.pydata.org/docs/reference/api/pandas.read_html.html) to scrape the data into a DataFrame. You may need to add headers to make it work:
 ```python
 url = 'https://en.wikipedia.org/wiki/List_of_S%26P_500_companies'
-headers = {'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x664) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/91.0.4472.124 Safari/537.36'}
+headers = {'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/91.0.4472.124 Safari/537.36'}
 
 # Fetch the HTML content with headers
 response = requests.get(url, headers=headers)
@@ -21,12 +21,15 @@ response = requests.get(url, headers=headers)
 Steps:
 1. Create a DataFrame with company tickers, names, and the year they were added.
 2. Extract the year from the addition date and calculate the number of stocks added each year.
-3. Which (full) year had the highest number of additions, STARTING FROM 2020? 
+3. Which (full) year had the highest number of additions, starting from 2020? 
 
-*Context*: 
+▎ Note: When stocks are added to the S&P 500, they usually experience a price bump as investors and index funds buy     
+  shares following the announcement.
+
+▎ Context: 
 > "Following the announcement, all four new entrants saw their stock prices rise in extended trading on Friday" - recent examples of S&P 500 additions include DASH, WSM, EXE, TKO in 2025 ([Nasdaq article](https://www.nasdaq.com/articles/sp-500-reshuffle-dash-tko-expe-wsm-join-worth-buying)).
 
-*Additional*: How many current S&P 500 stocks have been in the index for more than 20 years? When stocks are added to the S&P 500, they usually experience a price bump as investors and index funds buy shares following the announcement.
+*Additional*: How many current S&P 500 stocks have been in the index for more than 20 years? 
 
 ---
 ### Question 2. [Macro] Indexes YTD (as of 21 August 2026)

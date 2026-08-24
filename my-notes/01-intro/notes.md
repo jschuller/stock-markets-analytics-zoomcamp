@@ -86,7 +86,7 @@ Resources:
 - [FRED Fed Funds Rate](https://fred.stlouisfed.org/series/FEDFUNDS)
 - [Fed Dot Plot](https://www.bondsavvy.com/fixed-income-investments-blog/fed-dot-plot)
 - [Treasury Yield Curve](https://home.treasury.gov/resource-center/data-chart-center/interest-rates/TextView?type=daily_treasury_yield_curve&field_tdr_date_value=2025)
-- [1-Month Treasury Constant Maturity Rate](https://fred.stlouisfed.org/series/DGS1)
+- [1-Year Treasury Constant Maturity Rate](https://fred.stlouisfed.org/series/DGS1) — `DGS1` is the **1-Year** rate; the 1-month series is [`DGS1MO`](https://fred.stlouisfed.org/series/DGS1MO)
 - [30-Year Treasury Constant Maturity Rate](https://fred.stlouisfed.org/series/DGS30)
 - [Inverted Yield Curve Explanation](https://www.investopedia.com/terms/i/invertedyieldcurve.asp)
 - [Moody's Seasoned Aaa Corporate Bond Yield](https://fred.stlouisfed.org/series/AAA)

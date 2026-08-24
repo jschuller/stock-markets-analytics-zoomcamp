@@ -71,15 +71,50 @@ the coupling is shallow and mechanical:
 Keep `gdown`'s **CLI** form. The Python API's `fuzzy=` keyword was rejected by the
 version that installed here.
 
-## Storage
+## Storage — Unity Catalog
 
-Writable by the service principal: `/tmp` (ephemeral, per-run) and
-`/Workspace/Users/<sp-id>/` (persistent).
+Diagnosis: the service principal is in the `users` group, which holds only
+`USE_CATALOG` on `workspace`. The catalog is owned by
+`_workspace_admins_workspace_<id>`, and the metastore owner is `System user`
+(Databricks-managed on Free Edition). The SP cannot grant to itself —
+`grants update` returns `User does not have MANAGE on Catalog 'workspace'`.
+So a workspace admin has to run the grant once.
 
-Creating a Unity Catalog schema or volume fails with `PERMISSION_DENIED` for the
-`mac-claude-desktop` service principal. Catalogs present: `mycat`, `workspace`,
-`samples`, `system`. To pre-stage data in a volume, grant the SP `USE CATALOG` +
-`CREATE SCHEMA` on a catalog, or create the volume from the UI and grant `WRITE VOLUME`.
+**Run this as your admin user** — Databricks UI → **SQL Editor**, with the
+"Serverless Starter Warehouse" (it will auto-start):
+
+```sql
+GRANT USE CATALOG   ON CATALOG workspace TO `fe103a46-947d-4263-899e-58c73fb750f3`;
+GRANT CREATE SCHEMA ON CATALOG workspace TO `fe103a46-947d-4263-899e-58c73fb750f3`;
+```
+
+Two statements, and that is the whole fix. The service principal then creates
+`workspace.sma` itself, becomes its owner, and inherits every privilege inside
+it — volumes, tables, the lot — with no further grants needed.
+
+Prefer to keep catalog-level permissions tight? Create the objects yourself and
+grant only on them:
+
+```sql
+CREATE SCHEMA IF NOT EXISTS workspace.sma;
+CREATE VOLUME IF NOT EXISTS workspace.sma.data;
+GRANT USE CATALOG ON CATALOG workspace          TO `fe103a46-947d-4263-899e-58c73fb750f3`;
+GRANT USE SCHEMA, CREATE TABLE
+                  ON SCHEMA  workspace.sma      TO `fe103a46-947d-4263-899e-58c73fb750f3`;
+GRANT READ VOLUME, WRITE VOLUME
+                  ON VOLUME  workspace.sma.data TO `fe103a46-947d-4263-899e-58c73fb750f3`;
+```
+
+Verify afterwards with:
+
+```bash
+databricks grants get-effective catalog workspace \
+  --principal fe103a46-947d-4263-899e-58c73fb750f3
+```
+
+Until then, writable paths are `/tmp` (ephemeral, per-run) and
+`/Workspace/Users/<id>/` (persistent). The `mycat` catalog is not visible to the
+SP at all — `workspace` is the right target.
 
 ## Notebooks here
 
@@ -111,3 +146,42 @@ Omitting any cluster spec is what selects serverless. Add
 Profile `free-edition` in `~/.databrickscfg` (mode 0600, outside the repo), using
 OAuth M2M with a service principal client id + secret. Free Edition is serverless-only:
 zero clusters, one 2X-Small "Serverless Starter Warehouse".
+
+## Operational tooling
+
+`run_notebook.sh` collapses the four-step CLI cycle — `workspace import` →
+`jobs submit` → poll → `get-run-output` — into one command:
+
+```bash
+cd my-notes/databricks
+./run_notebook.sh 00_egress_probe.py        # default base environment
+./run_notebook.sh 01_env_probe.py 3         # pin serverless client version 3
+```
+
+It resolves the calling identity via `current-user me` rather than hardcoding an
+id, and pretty-prints the JSON the notebook returns.
+
+Two CLI gotchas worth knowing:
+
+- **The `--profile` flag does not survive shell variables in zsh.** `P="--profile x"; databricks ... $P`
+  passes one argument, not two, and fails with `unknown flag`. Export
+  `DATABRICKS_CONFIG_PROFILE=free-edition` instead.
+- **`%pip install` aborts the whole run on failure** — it raises
+  `CalledProcessError`. In probe notebooks, shell out via
+  `subprocess.run([sys.executable, "-m", "pip", ...])` and inspect the return code
+  so one bad package cannot kill the run.
+
+## Data sources: the Alpha Vantage option
+
+The Alpha Vantage MCP server is already connected in this Claude Code session and
+covers every data need in the course — `TIME_SERIES_DAILY` (20+ years OHLCV),
+plus `CPI`, `FEDERAL_FUNDS_RATE`, and `TREASURY_YIELD`, which are the same macro
+series Module 1 pulls from FRED. It also carries fundamentals, earnings, and
+technical indicators.
+
+Verified working: `TIME_SERIES_DAILY(AAPL)` returned 100 days through 2026-08-21.
+
+That makes it a credible replacement for the **Stooq** tier of `data_repo.py`'s
+fallback chain, which is dead on both networks tested. It is a real API with an
+SLA rather than a scraped endpoint — exactly what Ivan recommended in the
+Pre-Course Q&A when he said to prefer paid sources if you have them.

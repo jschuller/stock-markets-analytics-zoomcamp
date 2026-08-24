@@ -24,11 +24,17 @@ cells = []
 cells.append(md(r"""
 # Module 1 — Homework 1 (2026 cohort)
 
+[![Open In Colab](https://colab.research.google.com/assets/colab-badge.svg)](https://colab.research.google.com/github/jschuller/stock-markets-analytics-zoomcamp/blob/main/my-notes/01-intro/homework1.ipynb)
+
 **Due 2026-09-02** · questions in [`cohorts/2026/homework1.md`](../../cohorts/2026/homework1.md)
 · submission form was still `TO BE ADDED` when this was written
 
 Four scored questions plus two optional free-text ones. Each scored question gets
 its own cell and prints its value in an `ANSWER —` block.
+
+Runs unchanged in **three environments** — local Jupyter, Google Colab, and a
+Databricks notebook. The setup cell detects which one it is in and installs only
+what is missing; nothing else in the notebook is environment-specific.
 
 ## Reproducibility
 
@@ -66,12 +72,49 @@ prints both rather than picking silently:
 cells.append(md("## Setup"))
 
 cells.append(code(r'''
-# Run locally with:  conda activate stock-markets-analytics
-# On Colab, uncomment:
-# !pip install -q yfinance pandas-datareader
-
+import importlib.util
 import io
+import os
+import subprocess
+import sys
 import datetime as dt
+
+
+def detect_env():
+    """local | colab | databricks — decided once, used by the installer below."""
+    if "google.colab" in sys.modules:
+        return "colab"
+    try:
+        dbutils          # noqa: F821 — Databricks injects this into notebook globals
+        return "databricks"
+    except NameError:
+        pass
+    if os.environ.get("DATABRICKS_RUNTIME_VERSION"):
+        return "databricks"       # classic clusters set this; serverless may not
+    return "local"
+
+
+def ensure(*packages):
+    """Install only what is actually missing.
+
+    Deliberately subprocess and not `!pip` or `%pip`. `%pip` aborts the entire run
+    on failure with CalledProcessError, and neither magic survives headless
+    execution by nbconvert or the Databricks Jobs API — both of which this notebook
+    is run under. Same idiom as my-notes/databricks/bundle/src/01_env_probe.py.
+    """
+    missing = [p for p in packages
+               if importlib.util.find_spec(p.split("==")[0].replace("-", "_")) is None]
+    if missing:
+        print(f"installing: {', '.join(missing)}")
+        subprocess.run([sys.executable, "-m", "pip", "install", "-q", *missing],
+                       check=True)
+
+
+ENV = detect_env()
+# Colab ships numpy/pandas/requests/lxml but not yfinance; Databricks serverless
+# ships none of them; a local conda env built from my-notes/environment.yml has
+# them all, so this is a no-op there.
+ensure("yfinance")
 
 import numpy as np
 import pandas as pd
@@ -93,7 +136,10 @@ Q2_END      = dt.date(2026, 8, 21)      # title + hint; prose says 08-01, see be
 Q2_END_ALT  = dt.date(2026, 8, 1)       # the prose reading, printed for comparison
 Q4_TICKER   = "AMZN"
 
-print(f"yfinance {yf.__version__} | pandas {pd.__version__}")
+ANSWERS = {}        # collected by answer(); emitted as JSON by the final cell
+
+print(f"environment: {ENV}")
+print(f"yfinance {yf.__version__} | pandas {pd.__version__} | python {sys.version.split()[0]}")
 print(f"Q2 window pinned to {Q2_START} -> {Q2_END}")
 ''' ))
 
@@ -162,8 +208,13 @@ def get_ohlcv(tickers, start, end=None, auto_adjust=False):
     return out
 
 
-def answer(label, value, note=""):
-    """Print a submitted value unmissably. The homework is graded on these scalars."""
+def answer(key, label, value, note=""):
+    """Print a submitted value unmissably, and record it for the final JSON block.
+
+    The homework is graded on these scalars, so they are worth making impossible
+    to miss in a long notebook.
+    """
+    ANSWERS[key] = value
     bar = "=" * 64
     print(f"\n{bar}\nANSWER — {label}\n  >>> {value} <<<")
     if note:
@@ -226,7 +277,7 @@ print(f"\nadditions per year from {Q1_MIN_YEAR} "
 print(full_years.to_string())
 
 best = int(full_years[full_years == full_years.max()].index.max())
-answer("Q1 — year with most additions since 2020", best,
+answer("q1", "Q1 — year with most additions since 2020", best,
        f"{full_years.max()} additions; ties broken to the most recent year")
 
 # --- structural checks. No published answer key exists for this question. ---
@@ -293,7 +344,7 @@ table, n_better, bench_ret = compare_returns(
 
 print(f"window {Q2_START} -> {Q2_END} | S&P 500 returned {bench_ret:+.2f}%\n")
 print(table.to_string(index=False, float_format=lambda v: f"{v:+.2f}"))
-answer("Q2 — indexes beating the S&P 500", n_better,
+answer("q2", "Q2 — indexes beating the S&P 500", n_better,
        f"as of {Q2_END}, out of {len(table) - 1} non-benchmark indexes")
 
 # The question's prose says "1 January-1 August 2026" while its title and hint both
@@ -368,7 +419,7 @@ print(f"\ncorrections >= 5%: {len(corrections)}")
 print(f"drawdown %  — 25th {dd25:.2f} | median {dd50:.2f} | 75th {dd75:.2f}")
 print(f"duration d  — 25th {du25:.0f} | median {du50:.0f} | 75th {du75:.0f}")
 
-answer("Q3 — median drawdown of corrections (%)", f"{dd50:.2f}%")
+answer("q3", "Q3 — median drawdown of corrections (%)", f"{dd50:.2f}%")
 print(f"  (2025 asked for duration instead; that median is {du50:.0f} days)")
 ''' ))
 
@@ -470,7 +521,7 @@ print(e[["date", "eps_estimate", "eps_actual", "surprise_pct", "ret_2d_pct"]]
 
 cells.append(code(r'''
 corr = e["ret_2d_pct"].corr(e["surprise_pct"])
-answer("Q4 — correlation of 2-day return vs earnings surprise", f"{corr:.4f}",
+answer("q4", "Q4 — correlation of 2-day return vs earnings surprise", f"{corr:.4f}",
        f"Pearson, n = {len(e)}")
 
 # The heading's reading, printed alongside because the question asks both ways.
@@ -492,37 +543,99 @@ print(f"\n[structural check] {len(e)} matched announcements, no NaNs in either s
 # ------------------------------------------------------------------ Q5/Q6
 cells.append(md(r"""
 ---
-## Q5 / Q6 — exploratory (free text, optional)
+## Q5 — capstone idea (free text, optional)
 
-Both are prose, worth leaderboard points but not required for the certificate.
+**A short-horizon recommendation system for US large caps, built on the lakehouse
+this coursework already stands up, with an LLM layer that can only argue from
+features that actually exist.**
 
-**Q5 — capstone idea.** The most-requested 2026 project theme is an AI agent /
-investment recommendation system, and the course has added an explicit AI emphasis
-this year. Draft here, then move the final version into `my-notes/project/`.
+Concretely:
 
-**Q6 — additional metrics.** `stock_analytics.bronze.macro_series` already holds 17
-FRED series — the yield curve (`DGS1`…`DGS30`), credit spreads (`AAA`, `BAA`),
-breakeven inflation (`T10YIE`), volatility (`VIXCLS`, `GVZCLS`) and oil
-(`DCOILWTICO`, `DCOILBRENTEU`) — so this can be answered with a query rather than a
-fresh download:
+- **Universe and horizon.** The 190 US large caps already in
+  `bronze.ohlcv_daily`, on a 1–4 week horizon. Not a new universe — a deeper one.
+- **Close the two gaps this homework exposed.** Q1 needed S&P 500 membership
+  history and Q4 needed an earnings calendar; neither is in bronze, which is
+  exactly why `crosscheck_bronze` can only answer two of the four questions.
+  Ingesting both is the first capstone task, and it is motivated by evidence
+  rather than guessed at. Index-addition dates are independently interesting: the
+  question's own context notes that new entrants pop on announcement.
+- **Features.** TA-Lib indicators from Module 2, plus macro regime features from
+  the 17 FRED series already loaded — yield-curve slope (`DGS10 - DGS2`), credit
+  spread (`BAA - AAA`), breakeven inflation (`T10YIE`), `VIXCLS`. The macro side
+  is free; it is already sitting in `bronze.macro_series`.
+- **Model.** sklearn on a strictly temporal split, with the split boundaries
+  written to `ml.model_runs` on every run — the schema already has columns for
+  them precisely because lookahead bias is the easiest mistake to make here.
+- **Simulation.** `sim.trades` with `fees` never null. Fees are what kill
+  high-frequency strategies, and a good model that loses money after costs is the
+  normal outcome, not the surprising one.
+- **The AI layer, and its constraint.** An agent that turns each prediction into a
+  written rationale — but restricted to citing features that exist in the feature
+  store, so it cannot invent a reason the model did not use. The interesting
+  problem is not generating the text, it is making the explanation *faithful* to
+  the model. That constraint is the project.
+
+Risk I already know about: TensorFlow will not import on Databricks serverless
+(protobuf conflict), so any deep-learning component runs in Colab or locally.
+
+## Q6 — additional metrics (free text, optional)
+
+Seventeen macro series are already loaded, so this question is a `GROUP BY` rather
+than a download:
 
 ```sql
 SELECT series_id, count(*), min(date), max(date)
 FROM stock_analytics.bronze.macro_series GROUP BY 1 ORDER BY 1;
 ```
 
----
-## Before submitting
+**Already in, and why each earns its place:**
 
-1. Re-run top to bottom (`Kernel → Restart & Run All`). An answer that only
-   reproduces in a dirty kernel is not reproducible.
-2. Read the check line under each `ANSWER —` block, and the two `[ambiguity]` notes.
-3. The form wants the numbers **plus a public URL to this notebook** — push first.
-   The fork is public at `github.com/jschuller/stock-markets-analytics-zoomcamp`.
-4. The submission form and leaderboard links were still `TO BE ADDED` in
-   `cohorts/2026/homework1.md`. Re-sync before submitting:
-   `git fetch upstream && git merge upstream/main`.
+| Series | Why it matters |
+|---|---|
+| `DGS1 DGS2 DGS3 DGS5 DGS10 DGS30` | The whole curve, so slope and inversion are derivable rather than assumed. Inversion has preceded every recent US recession |
+| `AAA`, `BAA` | Their spread is a clean risk-appetite proxy that widens before equity drawdowns |
+| `T10YIE` | Market-implied inflation — separates a nominal rate move from a real one |
+| `VIXCLS`, `GVZCLS` | Equity and gold implied volatility; regime labels, and VIX is mean-reverting enough to be a feature rather than noise |
+| `FEDFUNDS`, `CPILFESL`, `GDPPOT` | The policy triangle the lectures build up from |
+| `DCOILWTICO`, `DCOILBRENTEU` | Input costs; their spread is a transport/logistics signal |
+
+**Worth adding next, in priority order:**
+
+1. **S&P 500 membership history** — the add/drop dates Q1 scrapes from Wikipedia.
+   Storing them turns a one-off scrape into a joinable dimension and makes index
+   -addition events a tradeable feature.
+2. **Earnings calendar with surprise** — `get_earnings_dates()` per ticker, which
+   Q4 needs. Note the trap Ivan flags: financial-statement data arrives 1–2 months
+   after quarter close, so joining on report date leaks the future into training.
+   Store both the announcement date and the period it covers.
+3. **Short interest** and **sector-ETF relative strength** — crowding and rotation,
+   neither derivable from OHLCV alone.
+
+Alpha Vantage is connected via MCP and covers most of this, but its free tier is
+**25 requests/day** — a fallback for specific symbols, not a bulk source. Anything
+universe-wide needs a different provider or a lot of patience.
 """))
+
+cells.append(md("""
+---
+## Submission block
+"""))
+
+cells.append(code(r'''
+import json
+
+print(json.dumps(ANSWERS, indent=2))
+
+# On Databricks this returns the answers through the Jobs API, which discards
+# print() output — so the same notebook works as a scheduled job. Off Databricks
+# `dbutils` is simply not defined and this is a no-op. It is deliberately the
+# very last statement: notebook.exit() stops execution, so anything after it
+# would never run interactively.
+try:
+    dbutils.notebook.exit(json.dumps(ANSWERS))   # noqa: F821
+except NameError:
+    pass
+''' ))
 
 # nbformat 4.5 requires a cell id; deterministic so the file diffs cleanly.
 for _i, _c in enumerate(cells):
@@ -531,9 +644,12 @@ for _i, _c in enumerate(cells):
 nb = {
     "cells": cells,
     "metadata": {
-        "kernelspec": {"display_name": "stock-markets-analytics",
-                       "language": "python", "name": "stock-markets-analytics"},
-        "language_info": {"name": "python", "version": "3.11.16"},
+        # Deliberately the generic python3 kernel, not the local conda env: this
+        # notebook is meant to open unchanged in Colab and Databricks, and a
+        # `stock-markets-analytics` / 3.11.16 fingerprint is a local artifact.
+        "kernelspec": {"display_name": "Python 3",
+                       "language": "python", "name": "python3"},
+        "language_info": {"name": "python"},
     },
     "nbformat": 4,
     "nbformat_minor": 5,

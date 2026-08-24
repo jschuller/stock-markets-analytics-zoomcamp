@@ -1,0 +1,40 @@
+# Three volumes.
+#
+# bronze.files is the drop-in target for Module 5's pd.read_parquet(data_dir):
+# point data_dir at /Volumes/<catalog>/bronze/files/ and repo.persist() and
+# repo.load() work with no porting at all.
+
+resources:
+  volumes:
+    bronze_files:
+      catalog_name: ${var.catalog}
+      schema_name: ${resources.schemas.bronze.name}
+      name: files
+      volume_type: MANAGED
+      comment: >-
+        Raw files: tickers_df/indexes_df/macro_df parquet written by
+        DataRepository.persist(), gdown downloads for Modules 3-5, and scraped
+        CSVs such as global_stocks.csv.
+      grants:
+        - principal: ${var.reader_principal}
+          privileges: [READ_VOLUME]
+
+    ml_models:
+      catalog_name: ${var.catalog}
+      schema_name: ${resources.schemas.ml.name}
+      name: models
+      volume_type: MANAGED
+      comment: Serialized sklearn artifacts written by TrainModel.persist().
+      grants:
+        - principal: ${var.reader_principal}
+          privileges: [READ_VOLUME]
+
+    project_exports:
+      catalog_name: ${var.catalog}
+      schema_name: ${resources.schemas.project.name}
+      name: exports
+      volume_type: MANAGED
+      comment: Capstone deliverables — submission CSVs, plots, report assets.
+      grants:
+        - principal: ${var.reader_principal}
+          privileges: [READ_VOLUME]

@@ -1,0 +1,71 @@
+# Six schemas on a medallion spine.
+#
+# The layering mirrors what the course code already does: Module 5's
+# DataRepository.persist -> bronze, TransformData.persist -> gold,
+# TrainModel.persist -> ml. `silver` and `sim` are added deliberately —
+# see ../../CATALOG_LAYOUT.md for the reasoning.
+
+resources:
+  schemas:
+    bronze:
+      catalog_name: ${var.catalog}
+      name: bronze
+      comment: >-
+        M1 — raw source-shaped pulls, append-only, never edited in place.
+        May hold duplicate (ticker, date) rows from different sources;
+        silver decides which one wins.
+      grants:
+        - principal: ${var.reader_principal}
+          privileges: [USE_SCHEMA, SELECT]
+
+    silver:
+      catalog_name: ${var.catalog}
+      name: silver
+      comment: >-
+        M2 — cleaned and deduped. Exactly one row per (ticker, date). This is
+        where the yfinance -> alphavantage fallback is resolved by source
+        preference. Stooq is excluded: dead on every network tested (2026-08).
+      grants:
+        - principal: ${var.reader_principal}
+          privileges: [USE_SCHEMA, SELECT]
+
+    gold:
+      catalog_name: ${var.catalog}
+      name: gold
+      comment: >-
+        M2/M3 — model-ready features and targets, the course's transformed_df.
+        Intentionally has no predefined tables: 200+ TA-Lib indicator columns
+        make hand-written DDL wrong on day one. Created schema-on-write.
+      grants:
+        - principal: ${var.reader_principal}
+          privileges: [USE_SCHEMA, SELECT]
+
+    ml:
+      catalog_name: ${var.catalog}
+      name: ml
+      comment: >-
+        M3 — predictions, run metrics, serialized model artifacts. Temporal
+        split boundaries are recorded on every run because lookahead bias is
+        the easiest mistake to make in this course.
+      grants:
+        - principal: ${var.reader_principal}
+          privileges: [USE_SCHEMA, SELECT]
+
+    sim:
+      catalog_name: ${var.catalog}
+      name: sim
+      comment: >-
+        M4 — trading simulation output. Kept out of `ml` because model quality
+        and strategy profitability are different questions; a good model still
+        loses money once fees are counted.
+      grants:
+        - principal: ${var.reader_principal}
+          privileges: [USE_SCHEMA, SELECT]
+
+    project:
+      catalog_name: ${var.catalog}
+      name: project
+      comment: Capstone workspace, kept separate from coursework.
+      grants:
+        - principal: ${var.reader_principal}
+          privileges: [USE_SCHEMA, SELECT]

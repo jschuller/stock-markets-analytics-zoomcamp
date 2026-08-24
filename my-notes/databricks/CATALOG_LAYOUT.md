@@ -90,35 +90,21 @@ fees is a fiction.
 
 ## Creating it
 
-Free Edition blocks `CREATE CATALOG` on the metastore
-(`PERMISSION_DENIED: User does not have CREATE CATALOG on Metastore`), and the
-metastore has no storage root because the account uses Default Storage. The API
-route therefore demands a `MANAGED LOCATION` that Free Edition does not expose.
-**The UI is the only path.**
-
-As your admin user:
-
-1. **Catalog** (left sidebar) → **Create catalog**
-2. Name `stock_analytics`, type **Standard**, storage **Default Storage**
-3. Create → **Owner** → set to `fe103a46-947d-4263-899e-58c73fb750f3`
-
-Setting the service principal as **owner** is the important part: an owner holds
-every privilege on everything inside the catalog, so no further grants are ever
-needed. That permanently removes the round-trip that blocked
-`CREATE SCHEMA` on `workspace`.
-
-Then, from the repo:
+The layout is defined by the **Asset Bundle** in [`bundle/`](bundle/) — that is the source
+of truth. `bundle/src/03_create_layout.py` is what the bundle *runs* to create tables (DAB
+has no Unity Catalog table resource); it is not a parallel path, and it deliberately does
+**not** create schemas or volumes, which belong to `resources/schemas.yml` and
+`resources/volumes.yml`.
 
 ```bash
-cd my-notes/databricks
-./run_notebook.sh 03_create_layout.py
+export DATABRICKS_CONFIG_PROFILE=free-edition
+cd my-notes/databricks/bundle
+databricks bundle deploy -t free-edition
+databricks bundle run bootstrap_tables -t free-edition
+databricks bundle run verify_layout    -t free-edition   # expect "ok": true
 ```
 
-Idempotent — safe to re-run. It returns JSON listing every schema, volume, and
-table it created, with `"ok": true` if nothing errored.
-
-Verify ownership first if the DDL fails:
-
-```bash
-databricks catalogs get stock_analytics --output json | grep owner
-```
+The catalog itself must exist first and be owned by the service principal — Free Edition
+permits neither `CREATE CATALOG` via API nor a metastore storage root, so it is a one-time
+UI step. Full detail, including the verified error messages, in
+[`bundle/README.md`](bundle/README.md).

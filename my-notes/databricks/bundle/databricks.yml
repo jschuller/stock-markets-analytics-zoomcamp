@@ -1,0 +1,49 @@
+# Databricks Asset Bundle — stock_analytics layout
+#
+# Chosen over Terraform because DAB *is* Terraform: the CLI shells out to a
+# bundled terraform binary running the databricks provider (see DATABRICKS_TF_*
+# in the CLI binary). This gets the same engine plus workspace-managed state,
+# native notebook sync, and job definitions — none of which Terraform does well.
+#
+#   databricks bundle validate -t free-edition
+#   databricks bundle deploy   -t free-edition
+#   databricks bundle run bootstrap_tables -t free-edition
+
+bundle:
+  name: sma-stock-analytics
+
+variables:
+  catalog:
+    description: >-
+      Unity Catalog catalog holding the layout. Must already exist — DAB cannot
+      create catalogs, and on Free Edition no API can (see README).
+    default: stock_analytics
+  reader_principal:
+    description: >-
+      Principal granted read access to every schema. Defaults to all account
+      users, which on a single-operator workspace is just you. Override per
+      target for a shared workspace.
+    default: account users
+
+include:
+  - resources/*.yml
+
+targets:
+  # This workspace: Databricks Free Edition, serverless-only.
+  free-edition:
+    default: true
+    workspace:
+      host: https://dbc-bf7dd89d-daac.cloud.databricks.com
+    variables:
+      catalog: stock_analytics
+
+  # Template for a second workspace. Uncomment and set the host; if that
+  # workspace has a metastore storage root, the catalog can be created by API
+  # there rather than through the UI.
+  #
+  # other:
+  #   workspace:
+  #     host: https://<workspace>.cloud.databricks.com
+  #   variables:
+  #     catalog: stock_analytics
+  #     reader_principal: data-team

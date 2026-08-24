@@ -1,0 +1,63 @@
+# Deploy the bundle and prove the result, on merge to main.
+#
+# Deploy is gated by the `free-edition` GitHub Environment, so a required
+# reviewer can be added there without touching this file.
+
+name: Bundle deploy
+
+on:
+  push:
+    branches: [main]
+    paths:
+      - 'my-notes/databricks/**'
+      - '.github/workflows/bundle-deploy.yml'
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: bundle-deploy
+  cancel-in-progress: false     # never interrupt a deploy mid-flight
+
+jobs:
+  deploy:
+    # Guard: anyone who forks this fork must not fire jobs at the workspace.
+    if: github.repository == 'jschuller/stock-markets-analytics-zoomcamp'
+    runs-on: ubuntu-latest
+    environment: free-edition
+    defaults:
+      run:
+        working-directory: my-notes/databricks/bundle
+    env:
+      DATABRICKS_HOST: ${{ vars.DATABRICKS_HOST }}
+      DATABRICKS_CLIENT_ID: ${{ secrets.DATABRICKS_CLIENT_ID }}
+      DATABRICKS_CLIENT_SECRET: ${{ secrets.DATABRICKS_CLIENT_SECRET }}
+
+    steps:
+      - uses: actions/checkout@fbc6f3992d24b796d5a048ff273f7fcc4a7b6c09 # v5
+
+      - uses: databricks/setup-cli@6bb7075f85b326f8b9ce160933dfe9bcd63c8121 # v1.13.0
+
+      - name: Deploy
+        run: databricks bundle deploy -t free-edition
+
+      - name: Create tables
+        run: databricks bundle run bootstrap_tables -t free-edition
+
+      - name: Verify layout
+        run: |
+          out="$(databricks bundle run verify_layout -t free-edition 2>&1)"
+          echo "$out"
+          # The notebook exits with JSON; fail the job unless it says ok:true.
+          echo "$out" | python3 -c '
+          import sys, re, json
+          raw = sys.stdin.read()
+          m = re.search(r"(\{.*\})\s*$", raw, re.S)
+          if not m:
+              sys.exit("verify_layout returned no JSON — treating as failure")
+          d = json.loads(m.group(1))
+          if not d.get("ok"):
+              sys.exit("layout verification FAILED: " + json.dumps(d.get("failures"), indent=2))
+          print("layout verified: ok")
+          '

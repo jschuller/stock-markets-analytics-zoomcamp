@@ -116,30 +116,36 @@ Until then, writable paths are `/tmp` (ephemeral, per-run) and
 `/Workspace/Users/<id>/` (persistent). The `mycat` catalog is not visible to the
 SP at all — `workspace` is the right target.
 
+## Layout as code
+
+The `stock_analytics` catalog layout is defined by a **Databricks Asset Bundle** in
+[`bundle/`](bundle/), deployable to any workspace. See
+[`bundle/README.md`](bundle/README.md) and [`CATALOG_LAYOUT.md`](CATALOG_LAYOUT.md).
+
+**Why DAB and not Terraform** — recorded here so it is not re-litigated: DAB *is*
+Terraform. `strings $(which databricks)` shows `bundle/deploy/terraform`,
+`DATABRICKS_TF_EXEC_PATH`, `DATABRICKS_TF_VERSION`. The CLI shells out to a Terraform
+binary running the `databricks/databricks` provider, so a bundle keeps that engine while
+adding workspace-managed state, notebook sync, and job definitions. `bundle plan` is the
+`terraform plan` equivalent. DAB cannot express catalogs (impossible on Free Edition
+anyway) or tables (done by a job); everything else it covers natively, grants included.
+
+CI/CD lives in [`../../.github/workflows/`](../../.github/workflows/): validate + plan on
+PRs, deploy + verify on merge to main.
+
 ## Notebooks here
 
 | File | Purpose |
 |---|---|
-| `00_egress_probe.py` | DNS/HTTPS per domain, preinstalled deps, installability, real course calls |
-| `01_env_probe.py` | Base versions by serverless client, TF/keras, Stooq, gdown, UC volume |
-| `02_final_probe.py` | Real gdown IDs, pandas upgrade, full TF traceback, writable paths |
+| `bundle/src/00_egress_probe.py` | DNS/HTTPS per domain, preinstalled deps, installability, real course calls |
+| `bundle/src/01_env_probe.py` | base versions by serverless client, TF/keras, Stooq, gdown |
+| `bundle/src/02_final_probe.py` | real gdown IDs, pandas upgrade, TF traceback, writable paths |
+| `bundle/src/03_create_layout.py` | table DDL, run by the bundle's `bootstrap_tables` job |
+| `bundle/src/04_verify_layout.py` | assertions incl. column names and types; CI gate |
 
-All three return results via `dbutils.notebook.exit(json.dumps(...))` — `print()` output
-does not come back through the Jobs API. Run one with:
-
-```bash
-export DATABRICKS_CONFIG_PROFILE=free-edition
-SP=/Users/<service-principal-id>
-databricks workspace import "$SP/sma-zoomcamp/00_egress_probe" \
-  --file my-notes/databricks/00_egress_probe.py \
-  --format SOURCE --language PYTHON --overwrite
-databricks jobs submit --no-wait --json \
-  "{\"run_name\":\"probe\",\"tasks\":[{\"task_key\":\"p\",\"notebook_task\":{\"notebook_path\":\"$SP/sma-zoomcamp/00_egress_probe\"}}]}"
-```
-
-Omitting any cluster spec is what selects serverless. Add
-`"environments":[{"environment_key":"default","spec":{"client":"3"}}]` and
-`"environment_key":"default"` on the task to pin a newer base environment.
+All return results via `dbutils.notebook.exit(json.dumps(...))` — `print()` output does
+not come back through the Jobs API. Run one ad hoc with `./run_notebook.sh <file.py>`,
+or through the bundle with `databricks bundle run <job> -t free-edition`.
 
 ## Auth
 

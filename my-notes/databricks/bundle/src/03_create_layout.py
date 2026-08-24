@@ -2,12 +2,16 @@
 # MAGIC %md
 # MAGIC # 03 — Create the `stock_analytics` layout
 # MAGIC
-# MAGIC Idempotent. Creates six schemas, three volumes, and the tables whose columns
-# MAGIC are knowable up front. Re-running is safe.
+# MAGIC Idempotent — creates only the **tables**. Re-running is safe.
 # MAGIC
-# MAGIC **Prerequisite:** the catalog must already exist and be owned by this service
-# MAGIC principal — Free Edition blocks `CREATE CATALOG` on the metastore, so it has to
-# MAGIC be made in the UI (Catalog → Create catalog → Default Storage).
+# MAGIC Schemas and volumes are owned by the Asset Bundle
+# MAGIC (`resources/schemas.yml`, `resources/volumes.yml`); creating them here too
+# MAGIC would be a second source of truth. DAB has no Unity Catalog table resource,
+# MAGIC which is the only reason tables are done in a notebook at all.
+# MAGIC
+# MAGIC **Prerequisite:** the catalog exists and is owned by this service principal —
+# MAGIC Free Edition blocks `CREATE CATALOG` on the metastore, so it is made once in
+# MAGIC the UI (Catalog → Create catalog → Default Storage).
 # MAGIC
 # MAGIC `gold.features` is deliberately **not** predefined: it is the course's
 # MAGIC `transformed_df`, which carries 200+ TA-Lib indicator columns. Hand-writing that
@@ -16,10 +20,15 @@
 
 # COMMAND ----------
 
-CATALOG = "stock_analytics"
+# Catalog comes from the bundle so a second workspace can use a different
+# name without editing this notebook. Falls back to the default when run
+# interactively outside a job.
+dbutils.widgets.text("catalog", "stock_analytics")
+CATALOG = dbutils.widgets.get("catalog")
+print(f"target catalog: {CATALOG}")
 
 import json
-log = {"schemas": {}, "volumes": {}, "tables": {}, "errors": []}
+log = {"tables": {}, "errors": []}
 
 def run(kind, name, sql):
     try:
@@ -28,29 +37,6 @@ def run(kind, name, sql):
     except Exception as e:
         log[kind][name] = f"{type(e).__name__}: {str(e)[:160]}"
         log["errors"].append(name)
-
-# ------------------------------------------------------------------ schemas
-SCHEMAS = {
-    "bronze":  "M1 — raw source-shaped pulls, append-only. Never edited in place.",
-    "silver":  "M2 — cleaned and deduped across sources. One row per (ticker, date).",
-    "gold":    "M2/M3 — model-ready features and targets. The course's transformed_df.",
-    "ml":      "M3 — predictions, run metrics, serialized model artifacts.",
-    "sim":     "M4 — trading simulation output: trades and equity curves.",
-    "project": "Capstone workspace, kept separate from coursework.",
-}
-for s, comment in SCHEMAS.items():
-    run("schemas", s, f"CREATE SCHEMA IF NOT EXISTS {CATALOG}.{s} COMMENT '{comment}'")
-
-# ------------------------------------------------------------------ volumes
-# bronze.files is the drop-in target for Module 5's pd.read_parquet(data_dir):
-#   data_dir = "/Volumes/stock_analytics/bronze/files/"
-VOLUMES = {
-    "bronze.files":    "Raw files: tickers_df/indexes_df/macro_df parquet, gdown downloads, scraped CSVs.",
-    "ml.models":       "Serialized sklearn artifacts written by TrainModel.persist().",
-    "project.exports": "Capstone deliverables: submission CSVs, plots, report assets.",
-}
-for v, comment in VOLUMES.items():
-    run("volumes", v, f"CREATE VOLUME IF NOT EXISTS {CATALOG}.{v} COMMENT '{comment}'")
 
 # ------------------------------------------------------------------- tables
 # Liquid clustering rather than partitioning: ~190 tickers x 25y is only a few
@@ -189,15 +175,14 @@ COMMENT 'Daily portfolio state per simulation, for drawdown and Sharpe.'
 
 # ------------------------------------------------------------------- verify
 try:
-    log["final_schemas"] = [r[0] for r in spark.sql(f"SHOW SCHEMAS IN {CATALOG}").collect()]
-    log["final_tables"] = [f"{s}.{r[1]}"
-                           for s in ("bronze", "silver", "gold", "ml", "sim", "project")
-                           for r in spark.sql(f"SHOW TABLES IN {CATALOG}.{s}").collect()]
-    log["final_volumes"] = [f"{s}.{r[2]}"
-                            for s in ("bronze", "ml", "project")
-                            for r in spark.sql(f"SHOW VOLUMES IN {CATALOG}.{s}").collect()]
+    log["final_tables"] = [
+        f"{sch}.{r[1]}"
+        for sch in ("bronze", "silver", "gold", "ml", "sim", "project")
+        for r in spark.sql(f"SHOW TABLES IN {CATALOG}.{sch}").collect()
+    ]
 except Exception as e:
-    log["verify_error"] = str(e)[:200]
+    log["verify_error"] = f"{type(e).__name__}: {str(e)[:150]}"
 
 log["ok"] = not log["errors"]
+print(json.dumps(log, indent=2))
 dbutils.notebook.exit(json.dumps(log))

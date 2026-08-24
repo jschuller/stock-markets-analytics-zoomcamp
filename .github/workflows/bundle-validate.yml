@@ -1,0 +1,94 @@
+# Validate the Databricks Asset Bundle on every PR.
+#
+# Never deploys. `bundle plan` is posted as a PR comment so infrastructure
+# diffs are reviewed before merge rather than discovered after.
+#
+# Actions are pinned to full commit SHAs — see databricks-sandbox commit
+# 4e70f2c "security: pin GitHub Actions to commit SHAs".
+
+name: Bundle validate
+
+on:
+  pull_request:
+    paths:
+      - 'my-notes/databricks/**'
+      - '.github/workflows/bundle-*.yml'
+  push:
+    branches-ignore: [main]
+    paths:
+      - 'my-notes/databricks/**'
+
+permissions:
+  contents: read
+
+concurrency:
+  # Free Edition allows only 5 concurrent job tasks and has limited compute,
+  # so supersede rather than stack runs.
+  group: bundle-validate-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  validate:
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+      pull-requests: write      # only for the plan comment below
+    defaults:
+      run:
+        working-directory: my-notes/databricks/bundle
+    env:
+      DATABRICKS_HOST: ${{ vars.DATABRICKS_HOST }}
+      # OAuth M2M. OIDC would be better, but it needs an account-level
+      # federation policy on the service principal and Databricks Free Edition
+      # exposes no account API. To switch on a paid workspace: delete these two
+      # lines, set DATABRICKS_AUTH_TYPE: github-oidc plus DATABRICKS_CLIENT_ID,
+      # and add `id-token: write` to permissions.
+      DATABRICKS_CLIENT_ID: ${{ secrets.DATABRICKS_CLIENT_ID }}
+      DATABRICKS_CLIENT_SECRET: ${{ secrets.DATABRICKS_CLIENT_SECRET }}
+
+    steps:
+      - uses: actions/checkout@fbc6f3992d24b796d5a048ff273f7fcc4a7b6c09 # v5
+
+      - uses: databricks/setup-cli@6bb7075f85b326f8b9ce160933dfe9bcd63c8121 # v1.13.0
+
+      - name: Validate bundle
+        run: databricks bundle validate -t free-edition
+
+      - name: Check notebook JSON is well-formed
+        working-directory: .
+        run: |
+          shopt -s nullglob globstar
+          found=0
+          for nb in my-notes/**/*.ipynb; do
+            found=1
+            python3 my-notes/tools/validate_notebook.py "$nb"
+          done
+          [ "$found" = "1" ] || echo "no .ipynb files to check"
+
+      - name: Plan
+        id: plan
+        run: |
+          {
+            echo 'stdout<<PLAN_EOF'
+            databricks bundle plan -t free-edition 2>&1 || true
+            echo 'PLAN_EOF'
+          } >> "$GITHUB_OUTPUT"
+
+      - name: Comment plan on PR
+        if: github.event_name == 'pull_request'
+        uses: actions/github-script@f28e40c7f34bde8b3046d885e986cb6290c5673b # v7
+        with:
+          script: |
+            const plan = `${{ steps.plan.outputs.stdout }}`;
+            await github.rest.issues.createComment({
+              issue_number: context.issue.number,
+              owner: context.repo.owner,
+              repo: context.repo.repo,
+              body: [
+                '### Databricks bundle plan — `free-edition`',
+                '',
+                '```',
+                plan.trim() || '(no output)',
+                '```',
+              ].join('\n'),
+            });

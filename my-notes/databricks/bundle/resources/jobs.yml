@@ -1,0 +1,36 @@
+# Tables are created by a job, not declaratively.
+#
+# DAB has no Unity Catalog table resource, so the layout notebook does the DDL.
+# The tradeoff is no drift detection on tables — covered instead by
+# 04_verify_layout.py, which asserts column names and types.
+#
+# No cluster spec is what selects serverless. Free Edition has zero clusters,
+# so this is the only option there anyway.
+
+resources:
+  jobs:
+    bootstrap_tables:
+      name: "[SMA] Bootstrap ${var.catalog} tables"
+      description: >-
+        Idempotent DDL for the fixed-schema tables. Safe to re-run on every
+        deploy; every statement is CREATE ... IF NOT EXISTS.
+      max_concurrent_runs: 1
+      tasks:
+        - task_key: create_layout
+          notebook_task:
+            notebook_path: ../src/03_create_layout.py
+            base_parameters:
+              catalog: ${var.catalog}
+
+    verify_layout:
+      name: "[SMA] Verify ${var.catalog} layout"
+      description: >-
+        Assertion-based check that the deployed layout matches spec. Returns
+        JSON with "ok": true/false. Run after bootstrap, and in CI.
+      max_concurrent_runs: 1
+      tasks:
+        - task_key: verify
+          notebook_task:
+            notebook_path: ../src/04_verify_layout.py
+            base_parameters:
+              catalog: ${var.catalog}

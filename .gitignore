@@ -15,3 +15,6 @@ __pycache__/
 
 # Secrets
 .env
+
+# Databricks Asset Bundle local state: generated terraform, provider binary (~100MB), tfstate
+.databricks/

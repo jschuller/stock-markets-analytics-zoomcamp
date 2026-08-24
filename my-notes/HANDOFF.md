@@ -1,6 +1,6 @@
 # Handoff — 2026 cohort, week 1
 
-**State as of 2026-08-24 10:25 EDT.** Read [`../CLAUDE.md`](../CLAUDE.md) first; it has the
+**State as of 2026-08-24 12:00 EDT.** Read [`../CLAUDE.md`](../CLAUDE.md) first; it has the
 conventions and the gotchas. This file is the task list, and goes stale — update it.
 
 ---
@@ -25,7 +25,22 @@ rather than doubling it. `verify_layout` still returns `ok: true`.
 
 **Homework 1 is answered.** Upstream published the questions (`28a52a7`, "HA1 2026") at
 ~10:10 EDT, ahead of the livestream. [`01-intro/homework1.ipynb`](01-intro/homework1.ipynb)
-runs top to bottom and prints all four scored answers.
+runs top to bottom and prints all four scored answers, plus drafted Q5/Q6.
+
+**All three environments now genuinely work.** The same notebook returns the same four
+answers on local Jupyter and on Databricks serverless — verified, not assumed. Its setup
+cell calls `detect_env()` and installs only what is missing, using `subprocess` rather
+than a `!pip`/`%pip` magic so it also survives `nbconvert` and the Jobs API. Colab is
+made correct by construction and has a one-click badge, but has not been executed from
+here — **that one is still a manual check**.
+
+**The fork has a front page.** [`.github/README.md`](../.github/README.md) is what GitHub
+renders instead of upstream's README, so the root `README.md` stays byte-identical and
+the mirror check still passes.
+
+**bronze is cross-validated.** `crosscheck_bronze` re-answers Q2 and Q3 from
+`bronze.ohlcv_daily` instead of from live yfinance: Q2 matches exactly, Q3 to within
+0.004 percentage points.
 
 ## Do these, roughly in order
 
@@ -47,10 +62,11 @@ Answers from `my-notes/01-intro/homework1.ipynb`, run 2026-08-24:
 **Two ambiguities are in the question sheet itself, not in the working.** The notebook
 prints both readings rather than choosing silently:
 
-- **Q2 dates.** The title says "as of 21 August 2026" and the hint says
-  `end_date='2026-08-21'`, but the prose says "1 January-1 August 2026". Two signals to
-  one, so 08-21 is the submitted answer → **2**. The 08-01 reading gives **4**. Worth
-  asking in Slack; this changes the answer.
+- **Q2 dates.** The heading, the bold question and the hint
+  (`end_date='2026-08-21'`) all say 21 August; only a prose parenthetical says
+  "1 January-1 August 2026". Three signals to one, so 08-21 is the submitted answer
+  → **2**. The 08-01 reading gives **4**. Still worth a Slack question, but the
+  reading is not close.
 - **Q4 wording.** The heading asks for the *median 2-day change after positive surprises*
   (**0.35%**, n=20); step 4 asks for the *correlation* (**0.2191**). The numbered step is
   taken as the question. Spearman is 0.2835 — the sample carries a 657% surprise outlier
@@ -74,12 +90,25 @@ Q5 and Q6 are optional free text and are **not** drafted — leaderboard points 
 
 Recorded, so the only thing missed by not attending live is the Q&A.
 
-### 3. Build `silver.prices_daily`
-Deliberately skipped this pass: with yfinance as the only source, the dedupe is a no-op.
-It becomes real as soon as a second source lands — which is the natural way to close the
-three-ticker gap below.
+### 3. Verify Colab by hand
+The one environment claim not proven from here. Open the badge in
+[`01-intro/COLAB_SETUP.md`](01-intro/COLAB_SETUP.md) (or in the front page) and run the
+notebook top to bottom. If it works, the three-environment claim is fully earned; if it
+does not, the fix belongs in [`tools/build_homework1.py`](tools/build_homework1.py),
+never in the `.ipynb` — the notebook is generated.
 
-### 4. Loose ends — your call, deliberately not done
+### 4. Build `silver.prices_daily`
+Deliberately skipped: with yfinance as the only source, the dedupe is a no-op. It becomes
+real as soon as a second source lands — which is the natural way to close the three-ticker
+gap below, and the natural next step for `crosscheck_bronze` to validate.
+
+### 5. Extend bronze to cover Q1 and Q4
+`crosscheck_bronze` can only answer two of the four homework questions, because index
+membership dates (Wikipedia) and earnings dates (`get_earnings_dates()`) are not stored.
+Ingesting both is the first capstone task — motivated by evidence rather than guessed at.
+See the Q5 draft in the notebook.
+
+### 6. Loose ends — your call
 
 - **GitHub CI has run once, and failed.** Correcting the previous handoff, which said it
   never had. `Bundle deploy` fired on push to main (2026-08-24T13:23:41Z) and failed in
@@ -119,10 +148,18 @@ three-ticker gap below.
 export DATABRICKS_CONFIG_PROFILE=free-edition
 export DATABRICKS_TF_EXEC_PATH="$(which tofu)"
 export DATABRICKS_TF_VERSION=1.12.6
-cd my-notes/databricks/bundle
+
+cd my-notes/databricks
+./push_notebooks.sh                                      # coursework .ipynb -> workspace
+cd bundle
 databricks bundle deploy -t free-edition
-databricks bundle run ingest_bronze -t free-edition    # idempotent; ~3 min
+databricks bundle run ingest_bronze     -t free-edition  # idempotent; ~3 min
+databricks bundle run crosscheck_bronze -t free-edition  # expect "ok": true
 ```
+
+**Keep stray files out of `bundle/`.** `databricks.yml` declares no `sync:` block, so the
+entire bundle root is uploaded on every deploy — anything dropped there goes to the
+workspace.
 
 `ingest_bronze` has a **paused** daily schedule (06:30 America/New_York). Unpause it in
 `resources/jobs.yml` when Module 5 wants a live pipeline.

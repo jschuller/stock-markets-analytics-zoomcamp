@@ -36,8 +36,10 @@ homework answer cannot do that.
 
 Both are in the sheet itself, not in the working; the notebook prints both readings.
 
-- **Q2 dates.** Title and hint say 2026-08-21; the prose says "1 January-1 August 2026".
-  Two signals to one, so 08-21 is submitted → **2**. The 08-01 reading gives **4**.
+- **Q2 dates.** The heading ("as of 21 August 2026"), the bold question ("as of
+  August 21, 2026") and the hint (`end_date='2026-08-21'`) all say 21 August; only a
+  prose parenthetical says "1 January-1 August 2026". Three signals to one, so 08-21
+  is submitted → **2**. The 08-01 reading gives **4**.
 - **Q4 wording.** The heading asks for the median 2-day change after positive surprises
   (**0.35%**, n=20); step 4 asks for the correlation (**0.2191**). The numbered step is
   taken as the question. Spearman is **0.2835** — a 657% surprise (2022-02-03) dominates

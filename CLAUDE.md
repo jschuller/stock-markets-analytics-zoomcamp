@@ -29,9 +29,17 @@ gh run list -R jschuller/stock-markets-analytics-zoomcamp
 
 ## The one structural rule
 
-**Everything outside `my-notes/` is an unmodified mirror of upstream. All personal work
-lives in `my-notes/`.** That is what keeps syncing painless. Before committing anything
-that touches a course directory, ask whether it belongs in `my-notes/` instead.
+**Never modify a file upstream owns. Adding files it does not have is free.**
+
+Merge conflicts come from modification, not addition — so all personal work lives in
+`my-notes/`, and the handful of root-level files that cannot live there (`.github/`,
+`CLAUDE.md`, `LICENSE`, `.gitignore`) are *new* paths upstream has none of, and can
+never conflict. Before committing anything that touches a course directory, ask
+whether it belongs in `my-notes/` instead.
+
+This is what lets `.github/README.md` be the fork's front page: GitHub renders it in
+preference to the root `README.md`, so the fork gets its own landing page while
+upstream's README stays byte-identical.
 
 Check the mirror is intact:
 
@@ -56,11 +64,20 @@ New module materials appear upstream on the day of each livestream — sync befo
 
 ## Three environments
 
-| | Use for | Notes |
+| | Use for | How you get there |
 |---|---|---|
-| **Colab** | Following live sessions | What the course targets. Links in `my-notes/01-intro/COLAB_SETUP.md` |
-| **Local conda** | Homework, capstone | env `stock-markets-analytics`, Python 3.11. Built and smoke-tested |
-| **Databricks Free Edition** | Warehouse-shaped work | Catalog `stock_analytics` deployed via Asset Bundle |
+| **Local conda** | Homework, capstone | `conda activate stock-markets-analytics`, Python 3.11 |
+| **Colab** | Following live sessions | One-click badges in `my-notes/01-intro/COLAB_SETUP.md`. The host swap `github.com` → `colab.research.google.com/github` works for `my-notes/` notebooks too, because the fork is public |
+| **Databricks Free Edition** | Warehouse-shaped work | `./my-notes/databricks/push_notebooks.sh` for coursework notebooks; `databricks bundle deploy` for the `stock_analytics` catalog |
+
+`homework1.ipynb` runs unchanged in all three — its setup cell calls `detect_env()`
+and installs only what is missing. Verified identical answers on local Jupyter and on
+Databricks serverless; Colab is the one that has only been made correct by
+construction, not executed from here.
+
+**The bundle syncs its entire root**, since `databricks.yml` declares no `sync:` block.
+Anything dropped in `my-notes/databricks/bundle/` gets uploaded on the next deploy —
+so keep stray files out of it.
 
 Local env: `conda activate stock-markets-analytics`. Definition in
 `my-notes/environment.yml` — **read the comments before changing pins**.

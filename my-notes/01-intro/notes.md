@@ -128,8 +128,6 @@ Resources:
 - Defining success: Success is easier to measure relative to a benchmark-such as the risk-free rate or a passive investment portfolio. Common metrics include the Sharpe ratio, Sortino ratio, and maximum drawdown
 - Data perspective: Because all markets are interconnected, you will likely need data on various asset classes and macroeconomic factors-even if your strategy focuses on a single asset type (for example, US large-cap stocks)
 
-![Google Colab interface](https://i.imgur.com/placeholder.jpg)
-
 Google Colab is the recommended environment for the course due to:
 - **Low barriers to start**: No installation required, runs in browser
 - **Pre-installed libraries**: Python, data science, and ML libraries ready to use

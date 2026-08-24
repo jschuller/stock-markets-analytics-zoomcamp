@@ -108,22 +108,43 @@ membership dates (Wikipedia) and earnings dates (`get_earnings_dates()`) are not
 Ingesting both is the first capstone task — motivated by evidence rather than guessed at.
 See the Q5 draft in the notebook.
 
-### 6. Loose ends — your call
+### 6. CI works now — and rotating is the last credential job
 
-- **GitHub CI has run once, and failed.** Correcting the previous handoff, which said it
-  never had. `Bundle deploy` fired on push to main (2026-08-24T13:23:41Z) and failed in
-  16s with `default auth: cannot configure default credentials` — the secrets are empty.
-  The `free-edition` Environment already exists. Note the `-R` flag; without it `gh` talks
-  to DataTalksClub:
+**GitHub CI is green end to end**, on PR #2. The full chain runs: deploy → create
+tables → verify layout, with `layout verified: ok`. Both claims that had never been
+tested now hold — a PR runs validate + plan and comments, and **no deploy fires from a
+PR**; deploy only runs on merge or dispatch.
+
+Getting there uncovered two failures stacked behind the credentials, neither of which
+anyone could have seen while CI failed at authentication:
+
+1. `databricks/setup-cli` with no `version` installs the newest CLI, which requests
+   provider `1.129.0` — OpenTofu rejects its signature outright.
+2. Pinning to 0.280.0 (matching local) fixes that and exposes the next one: 0.280.0
+   cannot download Terraform at all, `openpgp: key expired` — the same bug `CLAUDE.md`
+   documents for local.
+
+So CI now pins the CLI **and** installs OpenTofu 1.12.6 itself, setting
+`DATABRICKS_TF_EXEC_PATH` / `DATABRICKS_TF_VERSION` exactly as you would in a shell.
+`bundle/README.md` used to say CI was unaffected by this; it was never true, just
+untested. Corrected.
+
+Also worth knowing: the validate workflow's `Plan` step ends in `|| true`, so a broken
+plan still reports success. It is informational. `Validate bundle` is the real gate.
+
+**Still to do — the last credential job:**
+
+- **Rotate the Databricks service-principal secret.** It was pasted into a chat
+  transcript, and the current value is now also in GitHub Actions secrets. Deliberate:
+  we set the working value first to verify CI, and agreed to rotate straight after.
+  Databricks account console → Service principals → `mac-claude-desktop` → Secrets →
+  generate new, delete old. Then update **both** places:
   ```bash
-  R=jschuller/stock-markets-analytics-zoomcamp
-  gh variable set DATABRICKS_HOST -R $R --body 'https://dbc-bf7dd89d-daac.cloud.databricks.com'
-  gh secret set DATABRICKS_CLIENT_ID -R $R
-  gh secret set DATABRICKS_CLIENT_SECRET -R $R
+  R=jschuller/stock-markets-analytics-zoomcamp     # without -R, gh talks to DataTalksClub
+  gh secret set DATABRICKS_CLIENT_SECRET -R "$R"   # the new value
+  databricks configure --profile free-edition      # or edit ~/.databrickscfg
   ```
-  Then prove it with a throwaway PR touching `my-notes/databricks/`: validate + plan should
-  run and comment, **and no deploy should fire from the PR**.
-- **Rotate the Databricks service-principal secret.** It was pasted into a chat transcript.
+  Re-run `gh workflow run bundle-deploy.yml -R "$R"` afterwards to confirm CI still works.
 - **Rotate the Perplexity API key** in `~/construction-mcp/databricks-sandbox/.mcp.json` —
   committed across 3 commits and live at HEAD. Private repo, so contained, not urgent.
   Move it to an env-var reference and gitignore the file.

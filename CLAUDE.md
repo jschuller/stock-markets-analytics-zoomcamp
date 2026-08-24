@@ -130,7 +130,10 @@ one argument and fails with `unknown flag`.
   `[PARSE_SYNTAX_ERROR]`.
 - The installed CLI (v0.280.0) cannot download Terraform: `openpgp: key expired`. Work
   around it per-shell rather than upgrading, since a 0.280 → 1.x bump could break the
-  Azure bundles in `~/construction-mcp/databricks-sandbox`:
+  Azure bundles in `~/construction-mcp/databricks-sandbox`. **CI needs the same two
+  variables** — it pins the CLI to 0.280.0 and installs OpenTofu itself. Upgrading the
+  CLI is not an escape: a newer CLI requests provider 1.129.0, whose signature OpenTofu
+  rejects outright. 0.280.0 requests 1.99.0, which works.
 
 ```bash
 export DATABRICKS_TF_EXEC_PATH="$(which tofu)"

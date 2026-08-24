@@ -85,8 +85,28 @@ export DATABRICKS_TF_VERSION=1.12.6      # must match the binary, or the CLI ref
 ```
 
 OpenTofu works fine as the executor. The version variable is mandatory — without it the
-CLI expects exactly 1.5.5 and errors out. CI is unaffected: `databricks/setup-cli`
-installs a current CLI that does not have the expired-key bug.
+CLI expects exactly 1.5.5 and errors out.
+
+**CI needs the same workaround.** This file used to claim CI was unaffected because
+`databricks/setup-cli` installs a current CLI. That was never true — it had simply never
+been tested, because CI had no credentials and failed at authentication long before it
+reached `terraform init`. Once the secrets were set, CI hit both halves of the problem in
+sequence:
+
+| CLI in CI | Failure |
+|---|---|
+| latest (setup-cli default) | requests provider `1.129.0`; OpenTofu rejects it — `authentication signature from unknown issuer` |
+| 0.280.0 (pinned, matches local) | `error downloading Terraform: ... openpgp: key expired` |
+
+So [`../../../.github/workflows/`](../../../.github/workflows/) pins the CLI to **0.280.0**
+so it requests provider 1.99.0 — the version the local lockfile pins and the only one
+every deploy here has actually run against — and then installs OpenTofu 1.12.6 itself,
+setting `DATABRICKS_TF_EXEC_PATH` and `DATABRICKS_TF_VERSION` exactly as you would locally.
+CI and local now run the same toolchain, which is the point.
+
+One thing worth knowing about the validate workflow: its `Plan` step ends in `|| true`, so
+a broken plan is reported as success. It is informational, not a gate. `Validate bundle`
+is the real check.
 
 ## Layout
 

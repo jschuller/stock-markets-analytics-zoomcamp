@@ -7,7 +7,7 @@ That split is the point: upstream directories stay byte-identical, so syncing ea
 is always a clean fast-forward with nothing to merge by hand.
 
 ```bash
-git fetch upstream && git merge --ff-only upstream/main
+git fetch upstream && git merge upstream/main
 ```
 
 ## Layout

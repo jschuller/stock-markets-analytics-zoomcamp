@@ -162,5 +162,5 @@ Colab stays primary for live sessions — see [`01-intro/COLAB_SETUP.md`](01-int
 Pull each week's new material:
 
 ```bash
-git fetch upstream && git merge --ff-only upstream/main
+git fetch upstream && git merge upstream/main
 ```

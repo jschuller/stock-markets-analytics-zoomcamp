@@ -17,7 +17,7 @@ Swap the `github.com` host for `colab.research.google.com/github`:
 | 5 — Automation | [`[2025]_Module_05_Advanced_Strategies_And_Simulation.ipynb`](https://colab.research.google.com/github/DataTalksClub/stock-markets-analytics-zoomcamp/blob/main/05-deployment-and-automation/%5B2025%5D_Module_05_Advanced_Strategies_And_Simulation.ipynb) |
 
 These are the **2025** notebooks — the 2026 ones land in the same directories as
-each module airs. Re-run `git fetch upstream && git merge --ff-only upstream/main`
+each module airs. Re-run `git fetch upstream && git merge upstream/main`
 weekly to pick them up.
 
 Colab opens these read-only. Use **File → Save a copy in Drive** before editing,

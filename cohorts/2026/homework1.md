@@ -36,7 +36,7 @@ Steps:
 
 **How many indexes (out of 10) have better year-to-date returns than the US (S&P 500) as of August 21, 2026?**
 
-Using Yahoo Finance World Indices data, compare the year-to-date (YTD) performance (1 January-1 August 2026, use CLOSE price for the day) of major stock market indexes for the following countries:
+Using Yahoo Finance World Indices data, compare the year-to-date (YTD) performance (1 January-21 August 2026, use the closing price to calculate the growth) of major stock market indexes for the following countries:
 * United States - S&P 500 (^GSPC)
 * China - Shanghai Composite (000001.SS)
 * Hong Kong - HANG SENG INDEX (^HSI)	
@@ -49,7 +49,7 @@ Using Yahoo Finance World Indices data, compare the year-to-date (YTD) performan
 * Mexico - IPC Mexico (^MXX)
 * Brazil - Ibovespa (^BVSP)
 
-*Hint*: use start_date='2026-01-01' and end_date='2026-08-21' when downloading daily data in yfinance
+*Hint*: use ```start_date='2026-01-01'``` and ```end_date='2026-08-21'``` parameters when downloading daily data in yfinance
 
 Context: 
 > [Global Valuations: Who's Cheap, Who's Not?](https://simplywall.st/article/beyond-the-us-global-markets-after-yet-another-tariff-update) article suggests "Other regions may be growing faster than the US and you need to diversify."
@@ -57,7 +57,7 @@ Context:
 Reference: Yahoo Finance World Indices - https://finance.yahoo.com/world-indices/
 
 *Additional*: How many of these indexes have better returns than the S&P 500 over 3, 5, and 10 year periods? Do you see the same trend?
-Note: For simplicity, ignore currency conversion effects.)
+Note: For simplicity, ignore currency conversion effects.
 
 ---
 ### Question 3. [Index] S&P 500 Market Corrections Analysis

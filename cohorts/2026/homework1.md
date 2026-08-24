@@ -65,11 +65,11 @@ Note: For simplicity, ignore currency conversion effects.
 
 **Calculate the median drawdown (in %) of significant market corrections in the S&P 500 index.**
 
-For this task, define a correction as an event when a stock index goes down by **more than 5%** from the closest all-time high maximum.
+For this task, define a correction as an event when a stock index goes down by **at least 5%** from the most recent all-time high.
 
 Steps:
-1. Download S&P 500 historical data (1950-present) using yfinance
-2. Identify all-time high points (where price exceeds all previous prices)
+1. Download S&P 500 historical data (period from 1950 to present) using yfinance (daily stats)
+2. Identify all-time high closing price points (where price exceeds all previous days' prices)
 3. For each pair of consecutive all-time highs, find the minimum price in between
 4. Calculate drawdown percentages: (high - low) / high × 100
 5. Filter for corrections with at least 5% drawdown
@@ -97,10 +97,10 @@ Steps:
 ### Question 4.  [Stocks] Earnings Surprise Analysis for Amazon (AMZN)
 
 
-**Calculate the median 2-day percentage change in stock prices following positive earnings surprises days.**
+**Calculate the median 2-day percentage change in stock prices following positive earnings surprise days.**
 
 Steps:
-1. Load earnings data for the last years using the yfinance method get_earnings_dates():
+1. Load earnings data for the last few years using the yfinance method get_earnings_dates():
 ```python
 import yfinance as yf
 
@@ -108,15 +108,21 @@ ticker = 'AMZN'
 ticker_obj = yf.Ticker(ticker)
 result = ticker_obj.get_earnings_dates()
 ```
+You should have 25 entries starting from 2020-10-29. Note: the 1 future earnings date entry will not have Reported EPS  
+and Surprise % filled in.
+
 2. Download complete historical price data using yfinance
 3. Calculate 2-day percentage changes for all historical dates: for each sequence of 3 consecutive trading days (Day 1, Day 2, Day 3), compute the *return* as Close_Day3 / Close_Day1 - 1. (Assume Day 2 may correspond to the earnings announcement.)
-4. What's the correlation of a stock return vs. earnings surprise?
+4. Filter for positive earnings surprises and calculate the median 2-day return. Then calculate the correlation between
+   the 2-day stock return and the earnings surprise magnitude.
 
-Context: Earnings announcements, especially when they exceed analyst expectations, can significantly impact stock prices in the short term.
+▎ *Hint*: you can generate all correlations at once using pd.corr().
 
-Reference: Yahoo Finance earnings calendar - https://finance.yahoo.com/calendar/earnings?symbol=AMZN
+ > **Context:** Earnings announcements, especially when they exceed analyst expectations, can significantly impact stock prices in the short term.
 
-*Additional*: Is there a correlation between the magnitude of the earnings surprise and the stock price reaction? Does the market react differently to earnings surprises during bull vs. bear markets?)
+**Reference:** [Yahoo Finance Earnings Calendar](https://finance.yahoo.com/calendar/earnings?symbol=AMZN)
+
+*Additional*: Is there a correlation between the magnitude of the earnings surprise and the stock price reaction? Does the market react differently to earnings surprises during bull vs. bear markets?
 
 ---
 ### Question 5.  [Exploratory, optional] Brainstorm potential idea for your capstone project

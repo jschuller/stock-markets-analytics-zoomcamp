@@ -142,11 +142,11 @@ Using the data sources we have covered (or any others you find relevant), downlo
 
 ## Submitting the solutions
 
-Form for submitting: TO BE ADDED
+Form for submitting: https://courses.datatalks.club/sma-zoomcamp-2026/homework/hw01
 
 ---
 ## Leaderboard
 
-Leaderboard link: TO BE ADDED
+Leaderboard link: https://courses.datatalks.club/sma-zoomcamp-2026/leaderboard
 
 ---

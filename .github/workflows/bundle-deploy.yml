@@ -47,6 +47,24 @@ jobs:
         with:
           version: 0.280.0
 
+      # 0.280.0 cannot download Terraform for itself:
+      #   error downloading Terraform: unable to verify checksums signature:
+      #   openpgp: key expired
+      # Exactly the failure CLAUDE.md documents for local, so CI takes the same
+      # documented workaround: supply the binary and tell the CLI which one.
+      - uses: opentofu/setup-opentofu@9d84900f3238fab8cd84ce47d658d25dd008be2f # v1
+        with:
+          tofu_version: 1.12.6
+          tofu_wrapper: false          # DATABRICKS_TF_EXEC_PATH needs the real binary
+
+      - name: Point the Databricks CLI at OpenTofu
+        run: |
+          # DATABRICKS_TF_VERSION must match the binary exactly, or the CLI
+          # refuses it with "expected version is <x>".
+          echo "DATABRICKS_TF_EXEC_PATH=$(which tofu)" >> "$GITHUB_ENV"
+          echo "DATABRICKS_TF_VERSION=1.12.6"          >> "$GITHUB_ENV"
+          tofu version
+
       - name: Deploy
         run: databricks bundle deploy -t free-edition
 

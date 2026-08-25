@@ -32,6 +32,10 @@ dependencies:
   - pyarrow>=15.0.0
   - fastparquet>=2024.2.0
   - tqdm>=4.66.0
+  # Modules 3-5 fetch their parquet inputs with `!gdown <id> -O /content/`.
+  # Colab preinstalls it; locally it has to be declared or those notebooks
+  # fail at the download cell rather than at import time.
+  - gdown>=5.0.0
   # data sources / scraping
   - beautifulsoup4>=4.11.0
   - lxml>=5.0.0

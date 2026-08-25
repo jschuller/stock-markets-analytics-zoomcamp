@@ -53,7 +53,7 @@ CREATE TABLE IF NOT EXISTS {CATALOG}.bronze.ohlcv_daily (
   adj_close   DOUBLE,
   volume      BIGINT,
   source      STRING    NOT NULL  COMMENT 'yfinance | alphavantage | stooq',
-  asset_class STRING              COMMENT 'stock | index | etf',
+  asset_class STRING              COMMENT 'stock | index | etf | commodity | crypto',
   ingested_at TIMESTAMP NOT NULL
 )
 CLUSTER BY (ticker, date)
@@ -171,6 +171,16 @@ CREATE TABLE IF NOT EXISTS {CATALOG}.sim.equity_curve (
 )
 CLUSTER BY (sim_id, date)
 COMMENT 'Daily portfolio state per simulation, for drawdown and Sharpe.'
+""")
+
+# ---------------------------------------------------------------- comments
+# CREATE TABLE IF NOT EXISTS does not update a comment on a table that already
+# exists, so a column comment changed above would silently drift from the live
+# table. This one ALTER keeps code and catalog in step. Idempotent.
+
+run("tables", "bronze.ohlcv_daily.asset_class_comment", f"""
+ALTER TABLE {CATALOG}.bronze.ohlcv_daily ALTER COLUMN asset_class
+COMMENT 'stock | index | etf | commodity | crypto'
 """)
 
 # ------------------------------------------------------------------- verify

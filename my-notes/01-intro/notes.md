@@ -86,7 +86,7 @@ Resources:
 - [FRED Fed Funds Rate](https://fred.stlouisfed.org/series/FEDFUNDS)
 - [Fed Dot Plot](https://www.bondsavvy.com/fixed-income-investments-blog/fed-dot-plot)
 - [Treasury Yield Curve](https://home.treasury.gov/resource-center/data-chart-center/interest-rates/TextView?type=daily_treasury_yield_curve&field_tdr_date_value=2025)
-- [1-Month Treasury Constant Maturity Rate](https://fred.stlouisfed.org/series/DGS1)
+- [1-Year Treasury Constant Maturity Rate](https://fred.stlouisfed.org/series/DGS1) — `DGS1` is the **1-Year** rate; the 1-month series is [`DGS1MO`](https://fred.stlouisfed.org/series/DGS1MO)
 - [30-Year Treasury Constant Maturity Rate](https://fred.stlouisfed.org/series/DGS30)
 - [Inverted Yield Curve Explanation](https://www.investopedia.com/terms/i/invertedyieldcurve.asp)
 - [Moody's Seasoned Aaa Corporate Bond Yield](https://fred.stlouisfed.org/series/AAA)
@@ -127,8 +127,6 @@ Resources:
 - General guidance: It is often recommended to take more risk earlier in your investment journey (when you have less capital and a longer time horizon), and shift to more conservative strategies (such as bonds or diversified ETFs) as your capital grows or your goals near
 - Defining success: Success is easier to measure relative to a benchmark-such as the risk-free rate or a passive investment portfolio. Common metrics include the Sharpe ratio, Sortino ratio, and maximum drawdown
 - Data perspective: Because all markets are interconnected, you will likely need data on various asset classes and macroeconomic factors-even if your strategy focuses on a single asset type (for example, US large-cap stocks)
-
-![Google Colab interface](https://i.imgur.com/placeholder.jpg)
 
 Google Colab is the recommended environment for the course due to:
 - **Low barriers to start**: No installation required, runs in browser

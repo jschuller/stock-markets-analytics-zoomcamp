@@ -18,11 +18,28 @@ L's. The local macOS username is `jschulle`, one L shorter; building a remote UR
 - `origin` → `git@github.com:jschuller/stock-markets-analytics-zoomcamp.git` (the fork)
 - `upstream` → `https://github.com/DataTalksClub/...` (read-only)
 
+**`gh` resolves to upstream, not the fork.** With two remotes the CLI picks
+`DataTalksClub`, so `gh variable list` returns `HTTP 403` and `gh secret list`
+errors on ambiguity — both look like auth failures and are not. Every `gh`
+invocation in this repo needs the repo pinned:
+
+```bash
+gh run list -R jschuller/stock-markets-analytics-zoomcamp
+```
+
 ## The one structural rule
 
-**Everything outside `my-notes/` is an unmodified mirror of upstream. All personal work
-lives in `my-notes/`.** That is what keeps syncing painless. Before committing anything
-that touches a course directory, ask whether it belongs in `my-notes/` instead.
+**Never modify a file upstream owns. Adding files it does not have is free.**
+
+Merge conflicts come from modification, not addition — so all personal work lives in
+`my-notes/`, and the handful of root-level files that cannot live there (`.github/`,
+`CLAUDE.md`, `LICENSE`, `.gitignore`) are *new* paths upstream has none of, and can
+never conflict. Before committing anything that touches a course directory, ask
+whether it belongs in `my-notes/` instead.
+
+This is what lets `.github/README.md` be the fork's front page: GitHub renders it in
+preference to the root `README.md`, so the fork gets its own landing page while
+upstream's README stays byte-identical.
 
 Check the mirror is intact:
 
@@ -47,11 +64,20 @@ New module materials appear upstream on the day of each livestream — sync befo
 
 ## Three environments
 
-| | Use for | Notes |
+| | Use for | How you get there |
 |---|---|---|
-| **Colab** | Following live sessions | What the course targets. Links in `my-notes/01-intro/COLAB_SETUP.md` |
-| **Local conda** | Homework, capstone | env `stock-markets-analytics`, Python 3.11. Built and smoke-tested |
-| **Databricks Free Edition** | Warehouse-shaped work | Catalog `stock_analytics` deployed via Asset Bundle |
+| **Local conda** | Homework, capstone | `conda activate stock-markets-analytics`, Python 3.11 |
+| **Colab** | Following live sessions | One-click badges in `my-notes/01-intro/COLAB_SETUP.md`. The host swap `github.com` → `colab.research.google.com/github` works for `my-notes/` notebooks too, because the fork is public |
+| **Databricks Free Edition** | Warehouse-shaped work | `./my-notes/databricks/push_notebooks.sh` for coursework notebooks; `databricks bundle deploy` for the `stock_analytics` catalog |
+
+`homework1.ipynb` runs unchanged in all three — its setup cell calls `detect_env()`
+and installs only what is missing. Verified identical answers on local Jupyter and on
+Databricks serverless; Colab is the one that has only been made correct by
+construction, not executed from here.
+
+**The bundle syncs its entire root**, since `databricks.yml` declares no `sync:` block.
+Anything dropped in `my-notes/databricks/bundle/` gets uploaded on the next deploy —
+so keep stray files out of it.
 
 Local env: `conda activate stock-markets-analytics`. Definition in
 `my-notes/environment.yml` — **read the comments before changing pins**.
@@ -66,7 +92,14 @@ Local env: `conda activate stock-markets-analytics`. Definition in
   yfinance → Stooq → FRED fallback cannot be relied on anywhere.
 - **Alpha Vantage MCP is connected in Claude Code** and is the practical replacement:
   `TIME_SERIES_DAILY` plus `CPI`, `FEDERAL_FUNDS_RATE`, `TREASURY_YIELD` — the same
-  macro series Module 1 pulls from FRED.
+  macro series Module 1 pulls from FRED. Free tier is **25 requests/day**, so it is a
+  fallback for specific symbols, not a bulk source.
+- **yfinance 404s some live symbols.** Verified 2026-08-24: `MMC`, `FI` and `BK` return
+  `Not Found` from Yahoo's own chart endpoint (`query2.finance.yahoo.com/v8/finance/chart/`),
+  from two networks, at every start date. Not a yfinance bug and not transient — check
+  the raw endpoint before debugging client code. 187 of the 190 `data_repo.py` tickers load.
+- **`data_repo.py` lists `SNYS`, which does not exist.** The intended symbol is `SNPS`
+  (Synopsys). Fixed in `05_ingest_bronze.py` and reported in its exit JSON.
 - `pd.read_html` on Wikipedia returns **403** without a browser `User-Agent`; fetch with
   `requests` and pass the text to `read_html`.
 
@@ -97,12 +130,21 @@ one argument and fails with `unknown flag`.
   `[PARSE_SYNTAX_ERROR]`.
 - The installed CLI (v0.280.0) cannot download Terraform: `openpgp: key expired`. Work
   around it per-shell rather than upgrading, since a 0.280 → 1.x bump could break the
-  Azure bundles in `~/construction-mcp/databricks-sandbox`:
+  Azure bundles in `~/construction-mcp/databricks-sandbox`. **CI needs the same two
+  variables** — it pins the CLI to 0.280.0 and installs OpenTofu itself. Upgrading the
+  CLI is not an escape: a newer CLI requests provider 1.129.0, whose signature OpenTofu
+  rejects outright. 0.280.0 requests 1.99.0, which works.
 
 ```bash
 export DATABRICKS_TF_EXEC_PATH="$(which tofu)"
 export DATABRICKS_TF_VERSION=1.12.6      # must match the binary exactly
 ```
+
+- **Bronze is append-only across sources, not within one.** The same `(ticker, date)`
+  from yfinance *and* Alpha Vantage is expected; `silver` resolves it. The same row from
+  yfinance twice is a duplicate no rule can undo. `05_ingest_bronze.py` therefore defaults
+  to `mode=replace_source`, which deletes that source's rows before writing — re-running
+  reloads rather than doubling. Never switch it to `append` for a source already loaded.
 
 Layout, bundle, and CI are documented in `my-notes/databricks/`. **DAB is Terraform**
 underneath — that is why there is no separate Terraform config, and the decision should

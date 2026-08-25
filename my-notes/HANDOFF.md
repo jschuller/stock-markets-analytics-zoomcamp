@@ -1,6 +1,6 @@
 # Handoff — 2026 cohort, week 1
 
-**State as of 2026-08-24 12:00 EDT.** Read [`../CLAUDE.md`](../CLAUDE.md) first; it has the
+**State as of 2026-08-24 13:30 EDT.** Read [`../CLAUDE.md`](../CLAUDE.md) first; it has the
 conventions and the gotchas. This file is the task list, and goes stale — update it.
 
 ---
@@ -90,12 +90,14 @@ Q5 and Q6 are optional free text and are **not** drafted — leaderboard points 
 
 Recorded, so the only thing missed by not attending live is the Q&A.
 
-### 3. Verify Colab by hand
-The one environment claim not proven from here. Open the badge in
-[`01-intro/COLAB_SETUP.md`](01-intro/COLAB_SETUP.md) (or in the front page) and run the
-notebook top to bottom. If it works, the three-environment claim is fully earned; if it
-does not, the fix belongs in [`tools/build_homework1.py`](tools/build_homework1.py),
-never in the `.ipynb` — the notebook is generated.
+### 3. Click the homework1 Colab badge — after the PR merges
+`Module_01_Enhanced_Learning_Notebook.ipynb` was opened in Colab and works. **That is a
+different file.** `homework1.ipynb` exists only on the branch, so its badge — which
+points at `blob/main/...` — returns 404 until PR #2 merges. Once merged, open it and run
+top to bottom.
+
+If it fails, the fix belongs in [`tools/build_homework1.py`](tools/build_homework1.py),
+never in the `.ipynb` — the notebook is generated and hand edits are lost on rebuild.
 
 ### 4. Build `silver.prices_daily`
 Deliberately skipped: with yfinance as the only source, the dedupe is a no-op. It becomes
@@ -148,6 +150,78 @@ plan still reports success. It is informational. `Validate bundle` is the real g
 - **Rotate the Perplexity API key** in `~/construction-mcp/databricks-sandbox/.mcp.json` —
   committed across 3 commits and live at HEAD. Private repo, so contained, not urgent.
   Move it to an env-var reference and gitignore the file.
+
+## Environment parity — what is actually the same
+
+"Runs everywhere" is true of exactly one file. Be precise about the rest.
+
+| | Local | Colab | Databricks |
+|---|---|---|---|
+| `01-intro/homework1.ipynb` | **verified** | badge added, **not yet clicked** | **verified**, same 4 answers |
+| `01-intro/Module_01_Enhanced_Learning_Notebook.ipynb` | works | **verified 2026-08-24** | untested — writes `global_stocks.csv` to cwd, which may not be writable |
+| `databricks/bundle/src/*.py` | no | no | Databricks only — needs `spark`/`dbutils` |
+| pandas | 2.3.3 | 2.x | **1.5.3** on the serverless base |
+| TA-Lib | conda-forge `ta-lib` | preinstalled | pip `TA-Lib` (**not** `ta-lib-binary`) |
+| TensorFlow | works | works | installs, **will not import** |
+| Data source | live yfinance | live yfinance | live yfinance **or** `bronze.ohlcv_daily` |
+
+So: the *homework* is portable, the *infrastructure* is not, and the base library
+versions differ in ways that will bite in Module 2 (TA-Lib) and Module 3 (TensorFlow).
+Assume nothing else is portable without running it.
+
+## Next session — testing and observability
+
+This is a data project, so the tests that matter are about data, not code. Nothing here
+is tested today: CI only checks that notebook JSON parses, and there is no `tests/`
+directory or pytest anywhere.
+
+### Do first
+
+1. **Extract `find_corrections` into a module and unit-test it.** It is currently
+   copy-pasted into three files (`tools/build_homework1.py`,
+   `databricks/bundle/src/06_crosscheck_bronze.py`, and the generated notebook). That
+   duplication quietly weakens the cross-check: it validates that *bronze data*
+   reproduces the answer, not that the *algorithm* is right, because both sides run the
+   same copied code. Fix by making the algorithm a real module with its own test, and
+   let the cross-check keep doing the data half.
+
+   The golden fixture already exists: the ten corrections published in the question text
+   (`cohorts/2026/homework1.md`). Assert against those. Also worth a rubric point —
+   "code is well designed and commented on in modules."
+
+2. **A data-quality job, `src/07_data_quality.py`.** Same house style as
+   `04_verify_layout` — `run()` helper, exit JSON with `ok`. Checks worth having:
+
+   | Check | Catches |
+   |---|---|
+   | freshness — `max(date)` within N business days | a silently stopped pipeline |
+   | row-count bounds per asset class | a partial load that "succeeded" |
+   | uniqueness of `(ticker, date)` per source | the append-vs-replace trap |
+   | `high >= low`, `low <= close <= high`, no negative prices | upstream data corruption |
+   | null rate on `close`, `volume` | quiet degradation |
+   | every `ohlcv_daily.ticker` present in `bronze.tickers` | universe drift |
+
+3. **Run pytest in CI.** `bundle-validate.yml` currently proves only that notebooks are
+   valid JSON. Once (1) exists there is something real to run.
+
+### Then
+
+4. **Persist the run reports.** Every notebook already ends with
+   `dbutils.notebook.exit(json.dumps(...))`, and every one of those reports is thrown
+   away. Writing them to a small `ops.job_runs` table turns existing discipline into
+   actual observability — "when did ingest last succeed", "is the failed-ticker list
+   growing", "how long has `MMC` been 404ing". Cheap, because the JSON already exists.
+5. **`email_notifications` on the jobs** in `resources/jobs.yml`. A paused schedule that
+   fails silently is worse than no schedule.
+6. **A scheduled source-liveness probe.** `00_egress_probe.py` already does this shape
+   ad hoc. On a schedule it means you find out Yahoo changed *before* homework night.
+
+### Deliberately not
+
+**Do not run `nbconvert --execute` against live yfinance in per-PR CI.** yfinance is an
+unofficial API that goes down — the instructor says so, and three tickers 404 right now.
+Wiring it into a required check converts someone else's outage into your red build. Run
+it nightly and allow failure, or run it against `bronze` where the data is pinned.
 
 ## Known data gaps
 

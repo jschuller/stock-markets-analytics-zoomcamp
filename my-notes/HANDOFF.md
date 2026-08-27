@@ -1,17 +1,25 @@
 # Handoff — 2026 cohort, week 1
 
-**State as of 2026-08-24 13:30 EDT.** Read [`../CLAUDE.md`](../CLAUDE.md) first; it has the
+**State as of 2026-08-26.** Read [`../CLAUDE.md`](../CLAUDE.md) first; it has the
 conventions and the gotchas. This file is the task list, and goes stale — update it.
 
 ---
 
 ## Where things stand
 
-Repo synced to upstream `28a52a7` ("HA1 2026"). The **2026 Module 1 Colab notebook** (65 code cells)
-and the 2026 README section are local. Personal work is isolated in `my-notes/`, upstream
+Repo synced to upstream `03075c1`. Personal work is isolated in `my-notes/`, upstream
 directories verified pristine.
 
-**The Databricks bronze layer is loaded.** `stock_analytics` now holds:
+**Homework 1 is answered and correct — but not yet submitted.** That is the one job
+with a clock on it. See below.
+
+**Upstream corrected the questions after they were published.** Four commits landed on
+2026-08-24 between 21:26 and 22:16 UTC, all to `cohorts/2026/homework1.md`: `fde0cbe`
+Q1, `a6987b0` Q2, `a5cf53a` Q3–Q4, and `03075c1` adding the submit and leaderboard
+links. **One of them changed a scored answer.** If you are reading this after another
+sync, check for more.
+
+**The Databricks bronze layer is loaded and now checked.** `stock_analytics` holds:
 
 | Table | Rows | Span |
 |---|---|---|
@@ -19,137 +27,169 @@ directories verified pristine.
 | `bronze.macro_series` | 133,850 | 17 FRED series |
 | `bronze.tickers` | 210 | universe + market caps for all 190 stocks |
 
-Loaded by `ingest_bronze`, a bundle job. Verified: zero within-source duplicates,
-`^GSPC` closes match yfinance exactly, and a second run left the row count unchanged
-rather than doubling it. `verify_layout` still returns `ok: true`.
-
-**Homework 1 is answered.** Upstream published the questions (`28a52a7`, "HA1 2026") at
-~10:10 EDT, ahead of the livestream. [`01-intro/homework1.ipynb`](01-intro/homework1.ipynb)
-runs top to bottom and prints all four scored answers, plus drafted Q5/Q6.
-
-**All three environments now genuinely work.** The same notebook returns the same four
-answers on local Jupyter and on Databricks serverless — verified, not assumed. Its setup
-cell calls `detect_env()` and installs only what is missing, using `subprocess` rather
-than a `!pip`/`%pip` magic so it also survives `nbconvert` and the Jobs API. Colab is
-made correct by construction and has a one-click badge, but has not been executed from
-here — **that one is still a manual check**.
-
-**The fork has a front page.** [`.github/README.md`](../.github/README.md) is what GitHub
-renders instead of upstream's README, so the root `README.md` stays byte-identical and
-the mirror check still passes.
-
-**bronze is cross-validated.** `crosscheck_bronze` re-answers Q2 and Q3 from
-`bronze.ohlcv_daily` instead of from live yfinance: Q2 matches exactly, Q3 to within
-0.004 percentage points.
+**There is a test suite now**, the first in this repo. `my-notes/lib/corrections.py` is
+the single hand-maintained copy of the Q3 algorithm; `my-notes/tests/` asserts it
+against the ten published corrections using pinned price data, and `tests.yml` runs
+that on every PR.
 
 ## Do these, roughly in order
 
-### 1. Submit Homework 1 — computed, not yet submitted
-**The form link does not exist yet.** `cohorts/2026/homework1.md` says
-`Form for submitting: TO BE ADDED`, as does the leaderboard link. Re-sync before
-submitting, and check the platform at <https://courses.datatalks.club/sma-zoomcamp-2026/>.
-**Due 2026-09-02.**
+### 1. Submit Homework 1 — the only thing with a deadline
 
-Answers from `my-notes/01-intro/homework1.ipynb`, run 2026-08-24:
+**Form: <https://courses.datatalks.club/sma-zoomcamp-2026/homework/hw01>** ·
+**due 2026-09-14, 22:59.** (An earlier version of this file said 2026-09-02. Wrong.)
 
-| Q | Question | Answer | Confidence |
+It is **multiple choice**, and it asks for **no notebook URL** — so the old note here
+about needing a public link before submitting does not apply to this platform.
+
+| Q | Answer | Points | Confidence |
 |---|---|---|---|
-| 1 | Year with most S&P 500 additions since 2020 | **2025** (18 additions) | high — 503 constituents, 100% of dates parsed, and the question's own context note cites DASH/WSM/EXE/TKO joining in 2025 |
-| 2 | Indexes beating the S&P 500 YTD | **2** (Nikkei 225, S&P/TSX) | see the date ambiguity below |
-| 3 | Median drawdown of >5% corrections | **7.99%** | high — reproduces **all 10** published corrections exactly |
-| 4 | Correlation, 2-day return vs surprise | **0.2191** (Pearson, n=24) | see the wording ambiguity below |
+| 1 | **2025** | 2 | high — 18 additions, 503 constituents, 100% of dates parsed |
+| 2 | **2** | 3 | high — the date ambiguity was resolved upstream in our favour |
+| 3 | **8** (computed 7.99%) | 3 | high — reproduces all 10 published corrections, asserted in CI |
+| 4 | **0.35** | 2 | high — the corrected step 4 asks for the median; 0.35 is on the ballot |
 
-**Two ambiguities are in the question sheet itself, not in the working.** The notebook
-prints both readings rather than choosing silently:
+Q5 and Q6 are free text, 1 point each, and **are already drafted** — notebook cells 16
+and 17. Paste them. (A previous version of this file claimed they were not drafted. It
+contradicted its own section 5 and was wrong.)
 
-- **Q2 dates.** The heading, the bold question and the hint
-  (`end_date='2026-08-21'`) all say 21 August; only a prose parenthetical says
-  "1 January-1 August 2026". Three signals to one, so 08-21 is the submitted answer
-  → **2**. The 08-01 reading gives **4**. Still worth a Slack question, but the
-  reading is not close.
-- **Q4 wording.** The heading asks for the *median 2-day change after positive surprises*
-  (**0.35%**, n=20); step 4 asks for the *correlation* (**0.2191**). The numbered step is
-  taken as the question. Spearman is 0.2835 — the sample carries a 657% surprise outlier
-  (2022-02-03), so the rank correlation is the more honest number if asked to defend it.
+**What the corrections did.** Worth understanding, because one of them cost a point:
 
-The form wants numbers **plus a public URL** to the notebook — push before submitting. Do
-**not** put anything in `cohorts/`, which is upstream's.
+- **Q4 — the answer changed.** Step 4 used to ask only "what's the correlation of a
+  stock return vs. earnings surprise?", contradicting the question's own heading. This
+  notebook resolved that in favour of the numbered step and held **0.2191**. `a5cf53a`
+  rewrote step 4 to ask for the **median first** and the correlation second, and the
+  form's options are 3.35 / 2.35 / 1.35 / 0.35 — 0.2191 was never on the ballot. Now
+  **0.35%** (n = 20 of 24), with the correlation kept underneath because corrected
+  step 4 genuinely asks for both.
+- **Q2 — ambiguity dissolved.** The prose moved from "1 January-1 August" to "1
+  January-21 August", agreeing with the title and hint. The answer was already **2**;
+  the rival reading (4) is dead. The 08-01 window is still printed, now as a
+  sensitivity check.
+- **Q3 — wording tightened, answer unmoved.** "more than 5%" became "at least 5%", and
+  all-time highs are now explicitly closing-price based. Both already matched the code,
+  which filters `>=`. Still **7.99%**.
+- **Q1 — no change.** The heading gained "(starting from 2020)", which was already the
+  scoping used.
 
-Edit the notebook via `my-notes/tools/build_homework1.py` and regenerate, rather than
-hand-editing JSON. Re-run with:
+Edit via `my-notes/tools/build_homework1.py` and regenerate — never hand-edit the
+`.ipynb`. Re-run with:
 
 ```bash
+python my-notes/tools/build_homework1.py
 cd my-notes/01-intro && jupyter nbconvert --execute --to notebook --inplace homework1.ipynb
 ```
 
-Q5 and Q6 are optional free text and are **not** drafted — leaderboard points only.
+### 2. Click the homework1 Colab badge
+PR #2 merged, so `blob/main/...` resolves and the badge works. Open it and run top to
+bottom. This is the **last environment-parity claim made by construction rather than
+execution**. If it fails, the fix belongs in
+[`tools/build_homework1.py`](tools/build_homework1.py), never in the `.ipynb`.
 
-### 2. Watch the Module 1 livestream — 11:00 EDT today
-<https://www.youtube.com/watch?v=66T0fbf5rdc> · [2026 slides](https://docs.google.com/presentation/d/e/2PACX-1vQO0dtA4iFel1d1XoPr5pqVB1XZ5C9yQRf5UfDcIp8NbSinINCevBrEzes_lEr5uoDqZ8__8IxrxNzl/pub)
-· Q&A at <https://qna.dtcdev.click/r/sma>
+### 3. Rotate the Databricks service-principal secret
+The last credential job, and it needs you in a console.
 
-Recorded, so the only thing missed by not attending live is the Q&A.
+The secret was pasted into a chat transcript, and the current value is also in GitHub
+Actions secrets. Deliberate — the working value was set first to verify CI, on the
+agreement that it would be rotated straight after. Databricks account console →
+Service principals → `mac-claude-desktop` → Secrets → generate new, delete old. Then
+update **both** places:
 
-### 3. Click the homework1 Colab badge — after the PR merges
-`Module_01_Enhanced_Learning_Notebook.ipynb` was opened in Colab and works. **That is a
-different file.** `homework1.ipynb` exists only on the branch, so its badge — which
-points at `blob/main/...` — returns 404 until PR #2 merges. Once merged, open it and run
-top to bottom.
+```bash
+R=jschuller/stock-markets-analytics-zoomcamp     # without -R, gh talks to DataTalksClub
+gh secret set DATABRICKS_CLIENT_SECRET -R "$R"   # the new value
+databricks configure --profile free-edition      # or edit ~/.databrickscfg
+```
 
-If it fails, the fix belongs in [`tools/build_homework1.py`](tools/build_homework1.py),
-never in the `.ipynb` — the notebook is generated and hand edits are lost on rebuild.
+Re-run `gh workflow run bundle-deploy.yml -R "$R"` afterwards to confirm.
+
+Also still open: the **Perplexity API key** in
+`~/construction-mcp/databricks-sandbox/.mcp.json`, committed across 3 commits and live
+at HEAD. Private repo, so contained, not urgent. Move it to an env-var reference and
+gitignore the file.
 
 ### 4. Build `silver.prices_daily`
-Deliberately skipped: with yfinance as the only source, the dedupe is a no-op. It becomes
-real as soon as a second source lands — which is the natural way to close the three-ticker
-gap below, and the natural next step for `crosscheck_bronze` to validate.
+Still deliberately skipped: with yfinance as the only source, the dedupe is a no-op. It
+becomes real as soon as a second source lands — which is the natural way to close the
+three-ticker gap below.
 
 ### 5. Extend bronze to cover Q1 and Q4
-`crosscheck_bronze` can only answer two of the four homework questions, because index
-membership dates (Wikipedia) and earnings dates (`get_earnings_dates()`) are not stored.
-Ingesting both is the first capstone task — motivated by evidence rather than guessed at.
-See the Q5 draft in the notebook.
+`crosscheck_bronze` can only answer two of four questions, because index membership
+dates (Wikipedia) and earnings dates (`get_earnings_dates()`) are not stored. Ingesting
+both is the first capstone task — motivated by evidence rather than guessed at. See the
+Q5 draft in the notebook.
 
-### 6. CI works now — and rotating is the last credential job
+## Testing and observability — what exists now
 
-**GitHub CI is green end to end**, on PR #2. The full chain runs: deploy → create
-tables → verify layout, with `layout verified: ok`. Both claims that had never been
-tested now hold — a PR runs validate + plan and comments, and **no deploy fires from a
-PR**; deploy only runs on merge or dispatch.
+**`my-notes/lib/corrections.py`** is the only hand-maintained copy of the Q3 algorithm.
+Neither consumer can import it: Colab fetches a single `.ipynb` from GitHub and nothing
+else, and bundle `src/*.py` upload as Databricks *notebook objects* with the extension
+stripped. So both carry the text between `BEGIN SHARED` / `END SHARED` sentinels —
+`build_homework1.py` splices it in at build time, `06_crosscheck_bronze.py` holds a
+pasted copy — and `tests/test_no_drift.py` asserts they still match.
 
-Getting there uncovered two failures stacked behind the credentials, neither of which
-anyone could have seen while CI failed at authentication:
+They already did not. The cross-check's copy had quietly lost the `peak`/`trough`
+columns and returned `Timestamp` where the notebook returned `date`. Nothing caught it,
+because nothing compared them.
 
-1. `databricks/setup-cli` with no `version` installs the newest CLI, which requests
-   provider `1.129.0` — OpenTofu rejects its signature outright.
-2. Pinning to 0.280.0 (matching local) fixes that and exposes the next one: 0.280.0
-   cannot download Terraform at all, `openpgp: key expired` — the same bug `CLAUDE.md`
-   documents for local.
+| File | What it does |
+|---|---|
+| `tests/test_corrections.py` | the ten published corrections against a pinned ^GSPC series, 0.05pp and exact durations; plus the semantics the prose leaves implicit — the inclusive 5% boundary, `>=` against `cummax`, the open final episode, calendar-not-trading days |
+| `tests/test_no_drift.py` | the two carried copies still equal the canonical one |
+| `tests/data/gspc_close_1950_2026-08-24.csv` | 19,282 rows, pinned. Regenerate with `refresh_gspc_fixture.py` — and expect the 7.99% assertion to need updating if you do |
 
-So CI now pins the CLI **and** installs OpenTofu 1.12.6 itself, setting
-`DATABRICKS_TF_EXEC_PATH` / `DATABRICKS_TF_VERSION` exactly as you would in a shell.
-`bundle/README.md` used to say CI was unaffected by this; it was never true, just
-untested. Corrected.
+`python -m pytest my-notes/tests` — **never bare `pytest`**, which on this machine
+resolves to base miniforge rather than the project env.
 
-Also worth knowing: the validate workflow's `Plan` step ends in `|| true`, so a broken
-plan still reports success. It is informational. `Validate bundle` is the real gate.
+**`src/07_data_quality.py`** asserts the data is usable, not just that the layout is the
+right shape — freshness, row and ticker counts per asset class, `(ticker, date)`
+uniqueness, OHLC internal consistency, null rates, universe drift both ways, and the
+macro side. Run it with `databricks bundle run data_quality -t free-edition`.
 
-**Still to do — the last credential job:**
+Two things it taught us on its first run, both real:
 
-- **Rotate the Databricks service-principal secret.** It was pasted into a chat
-  transcript, and the current value is now also in GitHub Actions secrets. Deliberate:
-  we set the working value first to verify CI, and agreed to rotate straight after.
-  Databricks account console → Service principals → `mac-claude-desktop` → Secrets →
-  generate new, delete old. Then update **both** places:
-  ```bash
-  R=jschuller/stock-markets-analytics-zoomcamp     # without -R, gh talks to DataTalksClub
-  gh secret set DATABRICKS_CLIENT_SECRET -R "$R"   # the new value
-  databricks configure --profile free-edition      # or edit ~/.databrickscfg
-  ```
-  Re-run `gh workflow run bundle-deploy.yml -R "$R"` afterwards to confirm CI still works.
-- **Rotate the Perplexity API key** in `~/construction-mcp/databricks-sandbox/.mcp.json` —
-  committed across 3 commits and live at HEAD. Private repo, so contained, not urgent.
-  Move it to an env-var reference and gitignore the file.
+- **Futures settle outside the day's traded range.** 519 bars in `GC=F`/`CL=F` have a
+  close below the low or above the high, 2001–2020. That is the settlement price, not
+  corruption, so `commodity` carries its own documented tolerance while equities and
+  indexes are held to **zero** — and pass, across 1.78M stock and 151k index bars.
+- **The latest date holds a partial bar.** 16 stock bars dated 2026-08-24, the ingest
+  date, are internally inconsistent because ingestion runs during the session. The
+  most recent date is excluded from the check and reported separately.
+
+Two invariants are asserted rather than logged, so a known gap stays known: the tickers
+with no bars must be exactly `{BK, FI, MMC}`, and macro must hold 17 series.
+
+**The job is deliberately not in the deploy gate.** `ingest_bronze`'s schedule is
+paused, so bronze goes stale by design and freshness will go red on purpose.
+`verify_layout` stays the gate.
+
+> Note for anyone following the old plan in this file: it said to copy
+> `04_verify_layout`'s "`run()` helper". `04_verify_layout` has **`fail(msg)`**;
+> `run(kind, name, sql)` is in `03_create_layout`. The template actually used is
+> `06_crosscheck_bronze`'s `check(name, fn)`.
+
+### Still to do
+
+1. **Persist the run reports.** Every notebook ends with
+   `dbutils.notebook.exit(json.dumps(...))` and every one of those reports is thrown
+   away. Writing them to a small `ops.job_runs` table turns existing discipline into
+   observability — "when did ingest last succeed", "is the failed-ticker list growing",
+   "how long has `MMC` been 404ing". Cheap, because the JSON already exists. Now more
+   valuable than before, because `07_data_quality` emits a metrics block worth trending.
+2. **`email_notifications` on the jobs** in `resources/jobs.yml`. A paused schedule that
+   fails silently is worse than no schedule.
+3. **A scheduled source-liveness probe.** `00_egress_probe.py` already does this shape
+   ad hoc. On a schedule it means you find out Yahoo changed *before* homework night.
+4. **Schedule `data_quality`** when Module 5 unpauses the pipeline, and tighten
+   `max_staleness_days` at the same time.
+
+### Deliberately not
+
+**Do not run `nbconvert --execute` against live yfinance in per-PR CI.** yfinance is an
+unofficial API that goes down — the instructor says so, and three tickers 404 right now.
+Wiring it into a required check converts someone else's outage into your red build. The
+part that can actually regress, the Q3 algorithm, is covered by `test_corrections.py`
+against pinned data instead.
 
 ## Environment parity — what is actually the same
 
@@ -157,85 +197,31 @@ plan still reports success. It is informational. `Validate bundle` is the real g
 
 | | Local | Colab | Databricks |
 |---|---|---|---|
-| `01-intro/homework1.ipynb` | **verified** | badge added, **not yet clicked** | **verified**, same 4 answers |
+| `01-intro/homework1.ipynb` | **verified** | badge resolves, **not yet clicked** | **verified**, same answers |
 | `01-intro/Module_01_Enhanced_Learning_Notebook.ipynb` | works | **verified 2026-08-24** | untested — writes `global_stocks.csv` to cwd, which may not be writable |
+| `lib/corrections.py` + `tests/` | **verified** | n/a | n/a — pure Python, no `spark`/`dbutils`, which is why stock pytest is enough |
 | `databricks/bundle/src/*.py` | no | no | Databricks only — needs `spark`/`dbutils` |
 | pandas | 2.3.3 | 2.x | **1.5.3** on the serverless base |
 | TA-Lib | conda-forge `ta-lib` | preinstalled | pip `TA-Lib` (**not** `ta-lib-binary`) |
 | TensorFlow | works | works | installs, **will not import** |
-| Data source | live yfinance | live yfinance | live yfinance **or** `bronze.ohlcv_daily` |
 
 So: the *homework* is portable, the *infrastructure* is not, and the base library
 versions differ in ways that will bite in Module 2 (TA-Lib) and Module 3 (TensorFlow).
-Assume nothing else is portable without running it.
-
-## Next session — testing and observability
-
-This is a data project, so the tests that matter are about data, not code. Nothing here
-is tested today: CI only checks that notebook JSON parses, and there is no `tests/`
-directory or pytest anywhere.
-
-### Do first
-
-1. **Extract `find_corrections` into a module and unit-test it.** It is currently
-   copy-pasted into three files (`tools/build_homework1.py`,
-   `databricks/bundle/src/06_crosscheck_bronze.py`, and the generated notebook). That
-   duplication quietly weakens the cross-check: it validates that *bronze data*
-   reproduces the answer, not that the *algorithm* is right, because both sides run the
-   same copied code. Fix by making the algorithm a real module with its own test, and
-   let the cross-check keep doing the data half.
-
-   The golden fixture already exists: the ten corrections published in the question text
-   (`cohorts/2026/homework1.md`). Assert against those. Also worth a rubric point —
-   "code is well designed and commented on in modules."
-
-2. **A data-quality job, `src/07_data_quality.py`.** Same house style as
-   `04_verify_layout` — `run()` helper, exit JSON with `ok`. Checks worth having:
-
-   | Check | Catches |
-   |---|---|
-   | freshness — `max(date)` within N business days | a silently stopped pipeline |
-   | row-count bounds per asset class | a partial load that "succeeded" |
-   | uniqueness of `(ticker, date)` per source | the append-vs-replace trap |
-   | `high >= low`, `low <= close <= high`, no negative prices | upstream data corruption |
-   | null rate on `close`, `volume` | quiet degradation |
-   | every `ohlcv_daily.ticker` present in `bronze.tickers` | universe drift |
-
-3. **Run pytest in CI.** `bundle-validate.yml` currently proves only that notebooks are
-   valid JSON. Once (1) exists there is something real to run.
-
-### Then
-
-4. **Persist the run reports.** Every notebook already ends with
-   `dbutils.notebook.exit(json.dumps(...))`, and every one of those reports is thrown
-   away. Writing them to a small `ops.job_runs` table turns existing discipline into
-   actual observability — "when did ingest last succeed", "is the failed-ticker list
-   growing", "how long has `MMC` been 404ing". Cheap, because the JSON already exists.
-5. **`email_notifications` on the jobs** in `resources/jobs.yml`. A paused schedule that
-   fails silently is worse than no schedule.
-6. **A scheduled source-liveness probe.** `00_egress_probe.py` already does this shape
-   ad hoc. On a schedule it means you find out Yahoo changed *before* homework night.
-
-### Deliberately not
-
-**Do not run `nbconvert --execute` against live yfinance in per-PR CI.** yfinance is an
-unofficial API that goes down — the instructor says so, and three tickers 404 right now.
-Wiring it into a required check converts someone else's outage into your red build. Run
-it nightly and allow failure, or run it against `bronze` where the data is pinned.
 
 ## Known data gaps
 
-- **`MMC`, `FI`, `BK` are missing from bronze.** Yahoo's own chart endpoint 404s all three,
-  from two networks, at every start date — not a client bug and not transient. 187 of 190
-  `data_repo.py` stocks loaded. Backfill via Alpha Vantage when `silver` exists.
-- **`bronze.tickers` market caps are a 2025 snapshot.** `global_stocks.csv` has 10,000 rows
-  with MSFT at $3.38T; the 2026 lecture's live scrape returns 11,275 rows with NVDA at
-  $5.2T. Pinned deliberately for reproducibility — re-scrape when the numbers matter.
-- **`cohorts/2025/ha1_Amazon.csv` is partly mojibake** — four rows carry `???.36` where the
-  EPS digits should be, and a naive `to_numeric` silently drops them. 2026's Q4 uses
-  `yf.Ticker(...).get_earnings_dates()` instead of that CSV, so it no longer bites; noted
-  in case the file is reused. `get_earnings_dates()` returns only 25 quarters (2020-10
-  onward) and a **tz-aware** index at 16:00 America/New_York.
+- **`MMC`, `FI`, `BK` are missing from bronze.** Yahoo's own chart endpoint 404s all
+  three, from two networks, at every start date — not a client bug and not transient.
+  187 of 190 `data_repo.py` stocks loaded. **Now asserted** by `07_data_quality`, so if
+  the set changes you find out. Backfill via Alpha Vantage when `silver` exists.
+- **`bronze.tickers` market caps are a 2025 snapshot.** `global_stocks.csv` has 10,000
+  rows with MSFT at $3.38T; the 2026 lecture's live scrape returns 11,275 rows with
+  NVDA at $5.2T. Pinned deliberately for reproducibility — re-scrape when it matters.
+- **`cohorts/2025/ha1_Amazon.csv` is partly mojibake** — four rows carry `???.36` where
+  the EPS digits should be, and a naive `to_numeric` silently drops them. 2026's Q4 uses
+  `get_earnings_dates()` instead, so it no longer bites. That method returns 25 quarters
+  (2020-10 onward, one of them a future date with no reported EPS) and a **tz-aware**
+  index at 16:00 America/New_York.
 
 ## Databricks quick reference
 
@@ -250,11 +236,11 @@ cd bundle
 databricks bundle deploy -t free-edition
 databricks bundle run ingest_bronze     -t free-edition  # idempotent; ~3 min
 databricks bundle run crosscheck_bronze -t free-edition  # expect "ok": true
+databricks bundle run data_quality      -t free-edition  # expect "ok": true
 ```
 
-**Keep stray files out of `bundle/`.** `databricks.yml` declares no `sync:` block, so the
-entire bundle root is uploaded on every deploy — anything dropped there goes to the
-workspace.
+**Keep stray files out of `bundle/`.** `databricks.yml` declares no `sync:` block, so
+the entire bundle root is uploaded on every deploy.
 
 `ingest_bronze` has a **paused** daily schedule (06:30 America/New_York). Unpause it in
 `resources/jobs.yml` when Module 5 wants a live pipeline.
@@ -263,10 +249,10 @@ workspace.
 
 | Module | Homework due | Prepare |
 |---|---|---|
-| 2 — One Dataframe | 2026-09-16 | Pandas joins; TA-Lib indicators. TA-Lib install differs local vs Databricks. `gold.features` is schema-on-write by design. |
+| 2 — One Dataframe | 2026-09-16 | Pandas joins; TA-Lib indicators. TA-Lib install differs local vs Databricks. `gold.features` is schema-on-write by design. Note this is **two days** after HW1 is due. |
 | 3 — The Model | 2026-09-30 | sklearn. **TensorFlow will not import on Databricks serverless** (protobuf conflict) — use Colab or local for the DNN section. |
 | 4 — Trading System | 2026-10-14 | `sim.trades` is ready. Never leave `fees` null; fees are what kill high-frequency strategies. |
-| 5 — Automation | 2026-10-28 | Port `05-deployment-and-automation/scripts/*.py`. `05_ingest_bronze.py` already covers `DataRepository.fetch`; the remaining work is `transform.py` and `train.py`. Its Stooq fallback is dead — substitute Alpha Vantage. Natural point to add `databrickslabs/pylint-plugin` + `pytester` to CI. |
+| 5 — Automation | 2026-10-28 | Port `05-deployment-and-automation/scripts/*.py`. `05_ingest_bronze.py` already covers `DataRepository.fetch`; the remaining work is `transform.py` and `train.py`. Its Stooq fallback is dead — substitute Alpha Vantage. Natural point to add `databrickslabs/pylint-plugin` to CI. |
 | Capstone | 11-02 / 11-30 | **The only thing required for a certificate.** 6 of 36 points passes. Budget 15–50 h. Rubric in `projects/README.md`. A strong README with screenshots and a live link is what distinguished the 2025 top projects. |
 
 Two weeks per module, 7–10 h/week. Historic completion drops 36% → 8%; finishing is the

@@ -53,12 +53,15 @@ whole layout on an empty workspace.
 |---|---|---|---|
 | 1 | Year with most S&P 500 additions since 2020 | **2025** (18) | structural — 503 constituents, 100% of dates parsed |
 | 2 | Indexes beating the S&P 500 YTD | **2** | **independently reproduced from Delta** |
-| 3 | Median drawdown of >5% corrections | **7.99%** | **all 10 published corrections reproduced exactly** |
-| 4 | Correlation, 2-day return vs earnings surprise | **0.2191** | structural — 24 matched announcements |
+| 3 | Median drawdown of corrections of at least 5% | **7.99%** | **all 10 published corrections reproduced exactly, in CI** |
+| 4 | Median 2-day return after a positive earnings surprise | **0.35%** | structural — 20 positive surprises of 24 announcements |
 
 Q3 is the one worth clicking through. The question ships a table of the ten largest
 S&P 500 corrections since 1950; the notebook reproduces every one — peak date,
-trough date, drawdown and duration — before reporting its own answer.
+trough date, drawdown and duration — before reporting its own answer. That is not
+just a printout: the algorithm lives in [`my-notes/lib/corrections.py`](../my-notes/lib/corrections.py)
+and [a unit test](../my-notes/tests/test_corrections.py) asserts all ten against
+pinned price data on every push.
 
 Q2 and Q3 are then recomputed a second time, from `bronze.ohlcv_daily` instead of
 from the live API, by the [`crosscheck_bronze`](../my-notes/databricks/bundle/src/06_crosscheck_bronze.py)

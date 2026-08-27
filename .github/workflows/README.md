@@ -1,11 +1,16 @@
 # CI/CD
 
-Two workflows, deliberately split so that **nothing deploys from a pull request**.
+Three workflows, deliberately split so that **nothing deploys from a pull request**.
 
 | Workflow | Trigger | Does |
 |---|---|---|
+| `tests.yml` | every PR and push to `main` | `pytest my-notes/tests` — needs no Databricks credentials |
 | `bundle-validate.yml` | PRs and non-main pushes touching `my-notes/databricks/**` | `bundle validate`, notebook JSON check, `bundle plan` posted as a PR comment |
 | `bundle-deploy.yml` | push to `main` (same paths), or manual | `bundle deploy` → `bootstrap_tables` → `verify_layout`, failing unless the verifier returns `"ok": true` |
+
+`tests.yml` takes no paths filter. `test_no_drift.py` compares three copies of the
+same code block across `my-notes/lib/`, the notebook and the bundle, so any filter
+narrow enough to be useful would leave a hole exactly where drift gets in.
 
 ## Required configuration
 
@@ -77,6 +82,13 @@ the service principal, scoped to this repository.
   provide. See [`../../my-notes/databricks/bundle/README.md`](../../my-notes/databricks/bundle/README.md).
 - **The Module 5 daily pipeline.** That is a Databricks job schedule declared in
   `resources/jobs.yml`. GitHub deploys; Databricks schedules.
-- **Linting and unit tests.** `databrickslabs/pylint-plugin` and `databrickslabs/pytester`
-  are the right tools, but this repo currently has notebooks and no importable Python
-  modules. Add them when Module 5's `scripts/*.py` are ported.
+- **Linting.** `databrickslabs/pylint-plugin` is the right tool, and there is finally
+  something for it to lint. Add it when Module 5's `scripts/*.py` are ported.
+- **`databrickslabs/pytester`.** Unit tests arrived without it: `my-notes/lib/` is
+  plain Python needing no `spark` or `dbutils`, so it runs under stock pytest.
+  pytester earns its place when a test needs a real workspace.
+- **Executing notebooks in CI.** `nbconvert --execute` hits live yfinance, an
+  unofficial API that goes down — three tickers 404 right now. Wiring that into a
+  required check turns someone else's outage into a red build. The part that can
+  actually regress, the Q3 algorithm, is covered by `test_corrections.py` against a
+  pinned price series instead.

@@ -1,18 +1,18 @@
 ## Module 1 Homework (2026 cohort)
 
-In this homework, we're going to download finance data from various sources and make simple calculations or analysis.
+In this homework, we're going to download financial data from various sources and perform simple calculations and analysis.
 
 ---
 ### Question 1: [Index] S&P 500 Stocks Added to the Index
 
-**Which year had the highest number of additions?**
+**Which year had the highest number of additions (starting from 2020)?**
 
 Using the list of S&P 500 companies from Wikipedia's [S&P 500 companies page](https://en.wikipedia.org/wiki/List_of_S%26P_500_companies), download the data including the year each company was added to the index.
 
 Hint: you can use [pandas.read_html](https://pandas.pydata.org/docs/reference/api/pandas.read_html.html) to scrape the data into a DataFrame. You may need to add headers to make it work:
 ```python
 url = 'https://en.wikipedia.org/wiki/List_of_S%26P_500_companies'
-headers = {'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x664) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/91.0.4472.124 Safari/537.36'}
+headers = {'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/91.0.4472.124 Safari/537.36'}
 
 # Fetch the HTML content with headers
 response = requests.get(url, headers=headers)
@@ -21,19 +21,22 @@ response = requests.get(url, headers=headers)
 Steps:
 1. Create a DataFrame with company tickers, names, and the year they were added.
 2. Extract the year from the addition date and calculate the number of stocks added each year.
-3. Which (full) year had the highest number of additions, STARTING FROM 2020? 
+3. Which (full) year had the highest number of additions, starting from 2020? 
 
-*Context*: 
+▎ Note: When stocks are added to the S&P 500, they usually experience a price bump as investors and index funds buy     
+  shares following the announcement.
+
+▎ Context: 
 > "Following the announcement, all four new entrants saw their stock prices rise in extended trading on Friday" - recent examples of S&P 500 additions include DASH, WSM, EXE, TKO in 2025 ([Nasdaq article](https://www.nasdaq.com/articles/sp-500-reshuffle-dash-tko-expe-wsm-join-worth-buying)).
 
-*Additional*: How many current S&P 500 stocks have been in the index for more than 20 years? When stocks are added to the S&P 500, they usually experience a price bump as investors and index funds buy shares following the announcement.
+*Additional*: How many current S&P 500 stocks have been in the index for more than 20 years? 
 
 ---
 ### Question 2. [Macro] Indexes YTD (as of 21 August 2026)
 
 **How many indexes (out of 10) have better year-to-date returns than the US (S&P 500) as of August 21, 2026?**
 
-Using Yahoo Finance World Indices data, compare the year-to-date (YTD) performance (1 January-1 August 2026, use CLOSE price for the day) of major stock market indexes for the following countries:
+Using Yahoo Finance World Indices data, compare the year-to-date (YTD) performance (1 January-21 August 2026, use the closing price to calculate the growth) of major stock market indexes for the following countries:
 * United States - S&P 500 (^GSPC)
 * China - Shanghai Composite (000001.SS)
 * Hong Kong - HANG SENG INDEX (^HSI)	
@@ -46,7 +49,7 @@ Using Yahoo Finance World Indices data, compare the year-to-date (YTD) performan
 * Mexico - IPC Mexico (^MXX)
 * Brazil - Ibovespa (^BVSP)
 
-*Hint*: use start_date='2026-01-01' and end_date='2026-08-21' when downloading daily data in yfinance
+*Hint*: use ```start_date='2026-01-01'``` and ```end_date='2026-08-21'``` parameters when downloading daily data in yfinance
 
 Context: 
 > [Global Valuations: Who's Cheap, Who's Not?](https://simplywall.st/article/beyond-the-us-global-markets-after-yet-another-tariff-update) article suggests "Other regions may be growing faster than the US and you need to diversify."
@@ -54,7 +57,7 @@ Context:
 Reference: Yahoo Finance World Indices - https://finance.yahoo.com/world-indices/
 
 *Additional*: How many of these indexes have better returns than the S&P 500 over 3, 5, and 10 year periods? Do you see the same trend?
-Note: For simplicity, ignore currency conversion effects.)
+Note: For simplicity, ignore currency conversion effects.
 
 ---
 ### Question 3. [Index] S&P 500 Market Corrections Analysis
@@ -62,11 +65,11 @@ Note: For simplicity, ignore currency conversion effects.)
 
 **Calculate the median drawdown (in %) of significant market corrections in the S&P 500 index.**
 
-For this task, define a correction as an event when a stock index goes down by **more than 5%** from the closest all-time high maximum.
+For this task, define a correction as an event when a stock index goes down by **at least 5%** from the most recent all-time high.
 
 Steps:
-1. Download S&P 500 historical data (1950-present) using yfinance
-2. Identify all-time high points (where price exceeds all previous prices)
+1. Download S&P 500 historical data (period from 1950 to present) using yfinance (daily stats)
+2. Identify all-time high closing price points (where price exceeds all previous days' prices)
 3. For each pair of consecutive all-time highs, find the minimum price in between
 4. Calculate drawdown percentages: (high - low) / high × 100
 5. Filter for corrections with at least 5% drawdown
@@ -94,10 +97,10 @@ Steps:
 ### Question 4.  [Stocks] Earnings Surprise Analysis for Amazon (AMZN)
 
 
-**Calculate the median 2-day percentage change in stock prices following positive earnings surprises days.**
+**Calculate the median 2-day percentage change in stock prices following positive earnings surprise days.**
 
 Steps:
-1. Load earnings data for the last years using the yfinance method get_earnings_dates():
+1. Load earnings data for the last few years using the yfinance method get_earnings_dates():
 ```python
 import yfinance as yf
 
@@ -105,15 +108,21 @@ ticker = 'AMZN'
 ticker_obj = yf.Ticker(ticker)
 result = ticker_obj.get_earnings_dates()
 ```
+You should have 25 entries starting from 2020-10-29. Note: the 1 future earnings date entry will not have Reported EPS  
+and Surprise % filled in.
+
 2. Download complete historical price data using yfinance
 3. Calculate 2-day percentage changes for all historical dates: for each sequence of 3 consecutive trading days (Day 1, Day 2, Day 3), compute the *return* as Close_Day3 / Close_Day1 - 1. (Assume Day 2 may correspond to the earnings announcement.)
-4. What's the correlation of a stock return vs. earnings surprise?
+4. Filter for positive earnings surprises and calculate the median 2-day return. Then calculate the correlation between
+   the 2-day stock return and the earnings surprise magnitude.
 
-Context: Earnings announcements, especially when they exceed analyst expectations, can significantly impact stock prices in the short term.
+▎ *Hint*: you can generate all correlations at once using pd.corr().
 
-Reference: Yahoo Finance earnings calendar - https://finance.yahoo.com/calendar/earnings?symbol=AMZN
+ > **Context:** Earnings announcements, especially when they exceed analyst expectations, can significantly impact stock prices in the short term.
 
-*Additional*: Is there a correlation between the magnitude of the earnings surprise and the stock price reaction? Does the market react differently to earnings surprises during bull vs. bear markets?)
+**Reference:** [Yahoo Finance Earnings Calendar](https://finance.yahoo.com/calendar/earnings?symbol=AMZN)
+
+*Additional*: Is there a correlation between the magnitude of the earnings surprise and the stock price reaction? Does the market react differently to earnings surprises during bull vs. bear markets?
 
 ---
 ### Question 5.  [Exploratory, optional] Brainstorm potential idea for your capstone project
@@ -133,11 +142,11 @@ Using the data sources we have covered (or any others you find relevant), downlo
 
 ## Submitting the solutions
 
-Form for submitting: TO BE ADDED
+Form for submitting: https://courses.datatalks.club/sma-zoomcamp-2026/homework/hw01
 
 ---
 ## Leaderboard
 
-Leaderboard link: TO BE ADDED
+Leaderboard link: https://courses.datatalks.club/sma-zoomcamp-2026/leaderboard
 
 ---

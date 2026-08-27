@@ -112,6 +112,28 @@ Local env: `conda activate stock-markets-analytics`. Definition in
 | TA-Lib | **platform-dependent** | Locally: conda-forge `ta-lib`. On Databricks: pip **`TA-Lib`** — `ta-lib-binary` fails there. The two are opposite; do not unify them. |
 | `tensorflow` | broken on Databricks | Installs, will not import: its bundled protobuf gencode conflicts with the runtime's. Module 3 DNN section only; sklearn models are fine. |
 
+## Testing
+
+```bash
+python -m pytest my-notes/tests
+```
+
+**Never bare `pytest`.** The one first on PATH belongs to base miniforge, not the
+project env, so it runs the wrong interpreter and cannot import pandas 2.3.
+
+`my-notes/lib/corrections.py` holds the Q3 drawdown algorithm and is the **only
+hand-maintained copy**. Neither consumer can import it — Colab fetches a single
+`.ipynb` from GitHub and nothing else, and bundle `src/*.py` upload as Databricks
+*notebook objects* with the extension stripped, so a sibling import has nowhere to
+point. Both therefore carry the text between `# --- BEGIN SHARED: ... ---` and
+`# --- END SHARED ---`: `tools/build_homework1.py` splices it in at build time,
+`06_crosscheck_bronze.py` holds a pasted copy, and `tests/test_no_drift.py` asserts
+they still match. **Edit `lib/corrections.py`, then regenerate the notebook and paste
+into the cross-check** — editing a carried copy fails the drift test, by design.
+
+The Q3 golden test runs against a **pinned** `^GSPC` series in `tests/data/`, not live
+yfinance, so it works offline and in CI. Regenerating that fixture moves the answer.
+
 ## Databricks specifics
 
 ```bash

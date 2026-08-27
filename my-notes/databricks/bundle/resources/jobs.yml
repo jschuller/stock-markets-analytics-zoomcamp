@@ -96,3 +96,40 @@ resources:
               q2_end: "2026-08-21"
               expect_q2: "2"
               expect_q3: "7.99"
+
+    data_quality:
+      name: "[SMA] Data quality checks on ${var.catalog}.bronze"
+      description: >-
+        Asserts the data in bronze is usable, not just that the layout is the
+        right shape — freshness, row and ticker counts, (ticker, date)
+        uniqueness per source, OHLC internal consistency, null rates and
+        universe drift in both directions. Returns JSON with "ok": true/false.
+
+        Deliberately NOT part of the deploy gate. ingest_bronze's schedule is
+        paused, so bronze goes stale by design and the freshness check will go
+        red on purpose; verify_layout stays the CI gate. Put this on a schedule
+        when Module 5 unpauses the pipeline.
+
+        No environments: block, for the same reason as crosscheck_bronze —
+        reading Delta needs nothing beyond the serverless base image.
+      max_concurrent_runs: 1
+      tasks:
+        - task_key: data_quality
+          notebook_task:
+            notebook_path: ../src/07_data_quality.py
+            base_parameters:
+              catalog: ${var.catalog}
+              max_staleness_days: "5"
+              macro_max_staleness_days: "10"
+              min_ohlcv_rows: "1900000"
+              min_tickers: "200"
+              max_null_rate_pct: "1.0"
+              # Equities and indexes must be internally consistent. Futures close on
+              # the exchange settlement price, which legitimately falls outside the
+              # day's traded range, so commodity gets a documented allowance.
+              max_violation_rate_pct: "0.0"
+              commodity_max_violation_rate_pct: "5.0"
+              expect_macro_series: "17"
+              # The three symbols Yahoo's own chart endpoint 404s. Asserted, not
+              # just logged: if this list changes, something changed upstream.
+              expect_no_data_tickers: "BK,FI,MMC"

@@ -1,0 +1,45 @@
+# Unit tests for my-notes/lib/.
+#
+# Deliberately separate from the bundle workflows. This needs no Databricks
+# credentials, so it is fast, runs on forks, and cannot be blocked by a workspace
+# outage — the bundle workflows are the ones that need secrets and a live host.
+#
+# No paths filter on purpose. test_no_drift.py compares copies of the same block in
+# my-notes/lib/, my-notes/01-intro/homework1.ipynb and
+# my-notes/databricks/bundle/src/06_crosscheck_bronze.py, so any filter narrow
+# enough to be useful would leave a hole exactly where drift enters.
+#
+# Actions are pinned to full commit SHAs — tags are mutable, SHAs are not. Same
+# rule as bundle-validate.yml.
+
+name: Tests
+
+on:
+  pull_request:
+  push:
+    branches: [main]
+
+permissions:
+  contents: read
+
+concurrency:
+  group: tests-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  pytest:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@fbc6f3992d24b796d5a048ff273f7fcc4a7b6c09 # v5
+
+      - uses: actions/setup-python@5fda3b95a4ea91299a34e894583c3862153e4b97 # v7
+        with:
+          python-version: '3.11'      # matches my-notes/environment.yml
+
+      # Not the full conda env: these tests need pandas and pytest and nothing else,
+      # and the golden fixture is committed so there is no network dependency.
+      - name: Install test dependencies
+        run: python -m pip install --quiet "pandas>=2.2,<3" "pytest>=8"
+
+      - name: Run tests
+        run: python -m pytest my-notes/tests -v

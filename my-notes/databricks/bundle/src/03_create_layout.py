@@ -173,10 +173,40 @@ CLUSTER BY (sim_id, date)
 COMMENT 'Daily portfolio state per simulation, for drawdown and Sharpe.'
 """)
 
+run("tables", "ops.job_runs", f"""
+CREATE TABLE IF NOT EXISTS {CATALOG}.ops.job_runs (
+  run_id       BIGINT    NOT NULL  COMMENT 'the task run id, unique per attempt',
+  job_id       BIGINT,
+  job_name     STRING,
+  task_key     STRING,
+  started_at   TIMESTAMP,
+  ended_at     TIMESTAMP,
+  duration_ms  BIGINT,
+  result_state STRING              COMMENT 'SUCCESS | FAILED | TIMEDOUT | CANCELED',
+  trigger      STRING              COMMENT 'what started it: schedule, manual, CI',
+  ok           BOOLEAN             COMMENT 'the report ok flag, lifted out so it is queryable',
+  failures     STRING              COMMENT 'the report problem list as JSON text: its
+                                              failures key, or errors where the
+                                              notebook uses that name instead',
+  report       STRING              COMMENT 'the full notebook exit JSON, verbatim',
+  collected_at TIMESTAMP NOT NULL
+)
+CLUSTER BY (job_name, started_at)
+COMMENT 'Harvested notebook exit reports. ok and failures are lifted out of the
+         report so trends can be queried without parsing JSON on every read;
+         report keeps the original so nothing is lost by that projection.'
+""")
+
 # ---------------------------------------------------------------- comments
 # CREATE TABLE IF NOT EXISTS does not update a comment on a table that already
 # exists, so a column comment changed above would silently drift from the live
 # table. This one ALTER keeps code and catalog in step. Idempotent.
+
+run("tables", "ops.job_runs.failures_comment", f"""
+ALTER TABLE {CATALOG}.ops.job_runs ALTER COLUMN failures
+COMMENT 'the report problem list as JSON text: its failures key, or errors where the
+         notebook uses that name instead'
+""")
 
 run("tables", "bronze.ohlcv_daily.asset_class_comment", f"""
 ALTER TABLE {CATALOG}.bronze.ohlcv_daily ALTER COLUMN asset_class
@@ -187,7 +217,7 @@ COMMENT 'stock | index | etf | commodity | crypto'
 try:
     log["final_tables"] = [
         f"{sch}.{r[1]}"
-        for sch in ("bronze", "silver", "gold", "ml", "sim", "project")
+        for sch in ("bronze", "silver", "gold", "ml", "sim", "ops", "project")
         for r in spark.sql(f"SHOW TABLES IN {CATALOG}.{sch}").collect()
     ]
 except Exception as e:

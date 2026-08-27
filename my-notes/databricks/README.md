@@ -145,6 +145,7 @@ PRs, deploy + verify on merge to main.
 | `bundle/src/05_ingest_bronze.py` | fills the three bronze tables, run by the `ingest_bronze` job |
 | `bundle/src/06_crosscheck_bronze.py` | re-answers Homework 1 Q2/Q3 from bronze, run by `crosscheck_bronze` |
 | `bundle/src/07_data_quality.py` | asserts the data is usable, not just the layout; run by `data_quality` |
+| `bundle/src/08_collect_run_reports.py` | harvests run reports into `ops.job_runs`, run by `collect_run_reports` |
 
 All return results via `dbutils.notebook.exit(json.dumps(...))` — `print()` output does
 not come back through the Jobs API. Run one ad hoc with `./run_notebook.sh <file.py>`,

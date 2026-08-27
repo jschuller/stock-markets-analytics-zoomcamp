@@ -22,7 +22,7 @@ def fail(msg):
     R["failures"].append(msg)
 
 # ------------------------------------------------------------------ 1. schemas
-EXPECTED_SCHEMAS = ["bronze", "silver", "gold", "ml", "sim", "project"]
+EXPECTED_SCHEMAS = ["bronze", "silver", "gold", "ml", "sim", "ops", "project"]
 try:
     found = {r[0] for r in spark.sql(f"SHOW SCHEMAS IN {CATALOG}").collect()}
 except Exception as e:
@@ -98,6 +98,13 @@ EXPECTED = {
         "entry_price": "double", "exit_price": "double", "size": "double",
         "gross_pnl": "double", "fees": "double", "net_pnl": "double",
         "created_at": "timestamp",
+    },
+    "ops.job_runs": {
+        "run_id": "bigint", "job_id": "bigint", "job_name": "string",
+        "task_key": "string", "started_at": "timestamp", "ended_at": "timestamp",
+        "duration_ms": "bigint", "result_state": "string", "trigger": "string",
+        "ok": "boolean", "failures": "string", "report": "string",
+        "collected_at": "timestamp",
     },
     "sim.equity_curve": {
         "sim_id": "string", "strategy": "string", "date": "date",

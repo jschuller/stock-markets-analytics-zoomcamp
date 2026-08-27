@@ -138,6 +138,7 @@ project      VOLUME exports/
 | `src/05_ingest_bronze.py` | fills the bronze tables from yfinance + FRED; idempotent |
 | `src/06_crosscheck_bronze.py` | re-answers Homework 1 Q2/Q3 from Delta and asserts they match |
 | `src/07_data_quality.py` | freshness, counts, uniqueness, OHLC sanity, null rates, universe drift |
+| `src/08_collect_run_reports.py` | harvests notebook exit JSON from the Jobs API into `ops.job_runs` |
 | `src/04_verify_layout.py` | assertions incl. column names and types |
 | `src/0[0-2]_*.py` | egress and environment probes |
 

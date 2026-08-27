@@ -133,3 +133,22 @@ resources:
               # The three symbols Yahoo's own chart endpoint 404s. Asserted, not
               # just logged: if this list changes, something changed upstream.
               expect_no_data_tickers: "BK,FI,MMC"
+
+    collect_run_reports:
+      name: "[SMA] Collect run reports into ${var.catalog}.ops.job_runs"
+      description: >-
+        Harvests notebook exit JSON from the Jobs API into ops.job_runs.
+        Reads the API rather than having each notebook write its own row:
+        notebook.exit() stops execution so the write would have to precede it
+        in every notebook, bundle src files cannot import a shared helper, and
+        a notebook that dies before its exit line would record nothing —
+        which is the run you most want. Idempotent: MERGE on run_id.
+      max_concurrent_runs: 1
+      tasks:
+        - task_key: collect
+          notebook_task:
+            notebook_path: ../src/08_collect_run_reports.py
+            base_parameters:
+              catalog: ${var.catalog}
+              lookback_days: "30"
+              job_name_prefix: "[SMA]"

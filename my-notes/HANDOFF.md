@@ -184,20 +184,45 @@ paused, so bronze goes stale by design and freshness will go red on purpose.
 > `run(kind, name, sql)` is in `03_create_layout`. The template actually used is
 > `06_crosscheck_bronze`'s `check(name, fn)`.
 
+**`src/08_collect_run_reports.py`** harvests every notebook's exit JSON into
+`ops.job_runs`. It reads the **Jobs API** rather than having each notebook write its
+own row, which matters for three reasons: `notebook.exit()` stops execution so the
+write would have to precede it in all five notebooks; bundle `src/*.py` cannot import
+a shared helper, so it would be a sixth copy-pasted block; and a notebook that dies
+before its exit line would record nothing — the run you most want. Reading the API
+costs zero changes to the emitters, captures runs triggered from anywhere, records
+**failed** runs, and backfilled history that had already happened. `MERGE` on
+`run_id`, so it is safe to schedule.
+
+It earned its keep on the first run, with a query worth keeping:
+
+```sql
+SELECT * FROM stock_analytics.ops.job_runs
+WHERE result_state = 'SUCCESS' AND ok = false;
+```
+
+That is a run the Jobs API called SUCCESS — task exited 0, nothing alerted — while the
+notebook's own checks reported `ok:false`. Three showed up. Two were `data_quality`
+before its price check learned about futures settlement. The third was a `bootstrap`
+run from 2026-08-24 13:16 with `errors: ["gold"]`, a fossil from when `03` still
+created schemas itself, before they moved to `resources/schemas.yml`. Benign — but
+nothing would ever have told you.
+
+**Note the key inconsistency it exposed:** `04`, `06` and `07` report problems under
+`failures`, while `03` and `05` use `errors`. The collector lifts whichever is present
+into one column. Worth unifying if a sixth notebook appears.
+
 ### Still to do
 
-1. **Persist the run reports.** Every notebook ends with
-   `dbutils.notebook.exit(json.dumps(...))` and every one of those reports is thrown
-   away. Writing them to a small `ops.job_runs` table turns existing discipline into
-   observability — "when did ingest last succeed", "is the failed-ticker list growing",
-   "how long has `MMC` been 404ing". Cheap, because the JSON already exists. Now more
-   valuable than before, because `07_data_quality` emits a metrics block worth trending.
-2. **`email_notifications` on the jobs** in `resources/jobs.yml`. A paused schedule that
+1. **`email_notifications` on the jobs** in `resources/jobs.yml`. A paused schedule that
    fails silently is worse than no schedule.
-3. **A scheduled source-liveness probe.** `00_egress_probe.py` already does this shape
+2. **A scheduled source-liveness probe.** `00_egress_probe.py` already does this shape
    ad hoc. On a schedule it means you find out Yahoo changed *before* homework night.
-4. **Schedule `data_quality`** when Module 5 unpauses the pipeline, and tighten
-   `max_staleness_days` at the same time.
+3. **Schedule `data_quality` and `collect_run_reports`** when Module 5 unpauses the
+   pipeline, and tighten `max_staleness_days` at the same time. Note the collector's
+   30-day `lookback_days` is also the Jobs API's practical retention horizon — run it
+   at least monthly or history is lost for good.
+4. **Unify the `failures` / `errors` key** across the notebooks (see above).
 
 ### Deliberately not
 
@@ -253,7 +278,12 @@ databricks bundle deploy -t free-edition
 databricks bundle run ingest_bronze     -t free-edition  # idempotent; ~3 min
 databricks bundle run crosscheck_bronze -t free-edition  # expect "ok": true
 databricks bundle run data_quality      -t free-edition  # expect "ok": true
+databricks bundle run collect_run_reports -t free-edition # -> ops.job_runs
 ```
+
+Ad hoc queries against the catalog go through `./run_notebook.sh <file.py>`, which
+uploads a local notebook and returns its exit JSON — the workspace has no SQL editor
+worth using on Free Edition.
 
 **Keep stray files out of `bundle/`.** `databricks.yml` declares no `sync:` block, so
 the entire bundle root is uploaded on every deploy.

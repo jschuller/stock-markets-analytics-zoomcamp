@@ -62,6 +62,18 @@ resources:
         - principal: ${var.reader_principal}
           privileges: [USE_SCHEMA, SELECT]
 
+    ops:
+      catalog_name: ${var.catalog}
+      name: ops
+      comment: >-
+        Operational metadata about the pipeline itself, not about markets.
+        Every notebook already ends with dbutils.notebook.exit(json), and the
+        Jobs API keeps that output for a limited window before discarding it;
+        job_runs harvests it into something durable and queryable.
+      grants:
+        - principal: ${var.reader_principal}
+          privileges: [USE_SCHEMA, SELECT]
+
     project:
       catalog_name: ${var.catalog}
       name: project

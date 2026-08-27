@@ -24,6 +24,12 @@ added deliberately:
 - **`sim`** keeps Module 4's trading results out of `ml`. Model quality and
   strategy profitability are different questions, and Ivan is explicit that a
   good model can still lose money once fees are counted.
+- **`ops`** holds metadata about the pipeline rather than about markets, which is
+  why it is not on the medallion spine at all. Every notebook already ends with
+  `dbutils.notebook.exit(json.dumps(...))`; the Jobs API keeps that output for a
+  retention window and then drops it. `ops.job_runs` harvests it into something
+  durable, so "when did ingest last succeed" and "is the failed-ticker list
+  growing" become queries instead of archaeology.
 
 ## Layout
 
@@ -50,6 +56,9 @@ stock_analytics                       owned by the service principal
 ├── sim         M4 — simulation
 │   ├── trades                        one row per simulated trade
 │   └── equity_curve                  daily portfolio state
+│
+├── ops         pipeline metadata, not market data
+│   └── job_runs                      harvested notebook exit reports
 │
 └── project     capstone, kept separate from coursework
     └── VOLUME exports/

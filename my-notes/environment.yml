@@ -36,6 +36,10 @@ dependencies:
   # Colab preinstalls it; locally it has to be declared or those notebooks
   # fail at the download cell rather than at import time.
   - gdown>=5.0.0
+  # Unit tests for my-notes/lib/. Invoke as `python -m pytest`, never bare `pytest`:
+  # the `pytest` first on PATH belongs to base miniforge, not this env, so a bare
+  # call silently runs the wrong interpreter and cannot import pandas 2.3.
+  - pytest>=8
   # data sources / scraping
   - beautifulsoup4>=4.11.0
   - lxml>=5.0.0

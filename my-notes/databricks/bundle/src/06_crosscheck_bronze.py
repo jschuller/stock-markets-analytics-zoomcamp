@@ -119,12 +119,29 @@ check("q2_indexes_ytd", q2_from_bronze)
 # COMMAND ----------
 
 # ------------------------------------------------------------------------ Q3
-# Identical algorithm to homework1.ipynb: walk consecutive all-time highs, take
-# the lowest close between one and the next, keep falls of 5% or more, measure
-# peak-to-trough (not peak-to-recovery).
-def find_corrections(close, threshold_pct=5.0):
+# Spliced from my-notes/lib/corrections.py — edit there, not here.
+# --- BEGIN SHARED: find_corrections ---
+CORRECTION_COLUMNS = ["peak_date", "trough_date", "peak", "trough",
+                      "drawdown_pct", "duration_days"]
+
+
+def find_corrections(close: pd.Series, threshold_pct: float = 5.0) -> pd.DataFrame:
+    """Drawdown episodes measured from each all-time high.
+
+    Walks consecutive all-time highs; between one ATH and the next, the lowest close
+    is the trough. Keeps episodes whose fall reaches `threshold_pct` — inclusive, so
+    exactly 5.0% counts, matching the question's "goes down by **at least 5%** from
+    the most recent all-time high". Duration is calendar days from ATH to trough —
+    peak-to-trough, not peak-to-recovery, which is the convention the published
+    table uses.
+
+    An ATH is a close at or above every previous close, so a day that merely matches
+    a prior high starts a new episode. Returns one row per episode, and an empty
+    frame *with columns* when none qualify.
+    """
     close = close.dropna().sort_index()
     ath_dates = list(close.index[close >= close.cummax()])
+
     episodes = []
     for i, start in enumerate(ath_dates):
         end = ath_dates[i + 1] if i + 1 < len(ath_dates) else close.index[-1]
@@ -136,10 +153,14 @@ def find_corrections(close, threshold_pct=5.0):
         high = close.loc[start]
         dd = (high - trough_val) / high * 100
         if dd >= threshold_pct:
-            episodes.append({"peak_date": start, "trough_date": trough_date,
+            episodes.append({"peak_date": start.date(), "trough_date": trough_date.date(),
+                             "peak": float(high), "trough": float(trough_val),
                              "drawdown_pct": float(dd),
                              "duration_days": int((trough_date - start).days)})
-    return pd.DataFrame(episodes)
+    # columns= matters on the empty path: pd.DataFrame([]) has no columns at all, so
+    # a caller reading ["drawdown_pct"] would get KeyError rather than an empty Series.
+    return pd.DataFrame(episodes, columns=CORRECTION_COLUMNS)
+# --- END SHARED ---
 
 
 def q3_from_bronze():

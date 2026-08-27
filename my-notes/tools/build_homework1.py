@@ -5,8 +5,25 @@ and regenerable; the same reason the rest of my-notes/tools/ exists.
 
     python my-notes/tools/build_homework1.py
     cd my-notes/01-intro && jupyter nbconvert --execute --to notebook --inplace homework1.ipynb
+
+The Q3 drawdown algorithm is NOT written here. It lives in my-notes/lib/corrections.py,
+which has unit tests, and is spliced into the Q3 cell verbatim at build time. It is
+copied rather than imported because Colab fetches a single .ipynb from GitHub and
+nothing else, so the notebook has to stay self-contained.
 """
 import json
+import sys
+from pathlib import Path
+
+REPO = Path(__file__).resolve().parents[2]
+sys.path.insert(0, str(REPO / "my-notes" / "lib"))
+
+from shared_block import extract_shared_block, wrap_shared_block  # noqa: E402
+
+_CORRECTIONS = REPO / "my-notes" / "lib" / "corrections.py"
+SHARED_FIND_CORRECTIONS = wrap_shared_block(
+    extract_shared_block(_CORRECTIONS.read_text(), "find_corrections"),
+    "find_corrections", "my-notes/lib/corrections.py")
 
 
 def _lines(s):
@@ -26,8 +43,9 @@ cells.append(md(r"""
 
 [![Open In Colab](https://colab.research.google.com/assets/colab-badge.svg)](https://colab.research.google.com/github/jschuller/stock-markets-analytics-zoomcamp/blob/main/my-notes/01-intro/homework1.ipynb)
 
-**Due 2026-09-02** · questions in [`cohorts/2026/homework1.md`](../../cohorts/2026/homework1.md)
-· submission form was still `TO BE ADDED` when this was written
+**Due 2026-09-14, 22:59** · questions in [`cohorts/2026/homework1.md`](../../cohorts/2026/homework1.md)
+· [submission form](https://courses.datatalks.club/sma-zoomcamp-2026/homework/hw01)
+· [leaderboard](https://courses.datatalks.club/sma-zoomcamp-2026/leaderboard)
 
 Four scored questions plus two optional free-text ones. Each scored question gets
 its own cell and prints its value in an `ANSWER —` block.
@@ -43,16 +61,21 @@ numbers change every run. A homework answer cannot do that, so **every window he
 is pinned to a constant** declared in the setup cell. Re-running this notebook in
 December must print what it printed today.
 
-## Where the questions are ambiguous
+## Two ambiguities, since resolved upstream
 
-Two questions contradict themselves, so this notebook computes both readings and
-prints both rather than picking silently:
+The question sheet originally contradicted itself twice. Both were corrected on
+2026-08-24, hours after it was published, and both landed on the reading this
+notebook had already taken:
 
-- **Q2** is titled "as of 21 August 2026" and hints `end_date='2026-08-21'`, but its
-  prose says "1 January-1 August 2026". Two signals to one; **2026-08-21 is taken as
-  the answer**, with the 08-01 reading printed beside it.
-- **Q4**'s heading asks for the *median 2-day change after positive surprises*, while
-  its step 4 asks for *the correlation of return vs. surprise*. Both are printed.
+- **Q2** was titled "as of 21 August 2026" and hinted `end_date='2026-08-21'` while
+  its prose said "1 January-1 August 2026". Commit `a6987b0` changed the prose to
+  21 August. The 08-01 figure is still printed, now as a sensitivity check.
+- **Q4**'s heading asked for the *median 2-day change after positive surprises* while
+  step 4 asked for *the correlation*. Commit `a5cf53a` rewrote step 4 to ask for the
+  median **first** and the correlation second. The median is the submitted answer.
+- **Q3** defined a correction as a fall of "more than 5%" while its own step 5 said
+  "at least 5%". Commit `a5cf53a` settled on **at least**, which is the `>=` this
+  notebook was already using.
 
 ## Known traps in this material
 
@@ -347,14 +370,15 @@ print(table.to_string(index=False, float_format=lambda v: f"{v:+.2f}"))
 answer("q2", "Q2 — indexes beating the S&P 500", n_better,
        f"as of {Q2_END}, out of {len(table) - 1} non-benchmark indexes")
 
-# The question's prose says "1 January-1 August 2026" while its title and hint both
-# say 21 August. Print the other reading rather than hiding the ambiguity.
+# The prose used to say "1 January-1 August 2026" while the title and hint said 21
+# August. Upstream corrected the prose to 21 August in a6987b0, so this is now a
+# sensitivity check on the window rather than a rival reading of the question.
 _, n_alt, bench_alt = compare_returns(WORLD_INDEXES, Q2_START, Q2_END_ALT,
                                       benchmark="^GSPC", labels=WORLD_INDEXES)
-print(f"\n[ambiguity] using the prose window {Q2_START} -> {Q2_END_ALT} instead: "
+print(f"\n[sensitivity] with the earlier {Q2_START} -> {Q2_END_ALT} window instead: "
       f"S&P 500 {bench_alt:+.2f}%, {n_alt} indexes ahead."
       + ("  Same answer either way." if n_alt == n_better else
-         "  DIFFERENT — the title/hint reading (21 Aug) is the one submitted above."))
+         "  Different — which is why the window wording mattered until it was fixed."))
 
 assert not table["return_pct"].isna().any(), "a NaN return means a broken fetch"
 missing = set(WORLD_INDEXES) - set(table["ticker"])
@@ -368,43 +392,23 @@ cells.append(md(r"""
 ## Q3 — corrections from all-time highs
 
 > Calculate the **median drawdown (in %)** of significant market corrections in the
-> S&P 500, where a correction is a fall of more than 5% from the closest all-time high.
+> S&P 500, where a correction is a fall of **at least 5%** from the most recent
+> all-time high, measured on closing prices.
 
 Changed from 2025, which asked for median *duration*. Both are computed below; the
 drawdown percentile is the submitted answer.
 
 This is the one question with a real numeric self-check: the sheet publishes the top
 ten corrections by drawdown, so a correct implementation must reproduce them exactly.
+
+`find_corrections` below is not written in this notebook. It is spliced in from
+[`my-notes/lib/corrections.py`](../lib/corrections.py), which is the single
+hand-maintained copy and has its own unit tests — including the ten published
+corrections asserted against pinned price data, and the `>=` boundary that upstream's
+"at least 5%" wording settled.
 """))
 
-cells.append(code(r'''
-def find_corrections(close, threshold_pct=5.0):
-    """Drawdown episodes measured from each all-time high.
-
-    Walks consecutive all-time highs; between one ATH and the next, the lowest close
-    is the trough. Keeps episodes whose fall exceeds `threshold_pct`. Duration is
-    calendar days from ATH to trough — peak-to-trough, not peak-to-recovery, which is
-    the convention the published table uses.
-    """
-    close = close.dropna().sort_index()
-    ath_dates = list(close.index[close >= close.cummax()])
-
-    episodes = []
-    for i, start in enumerate(ath_dates):
-        end = ath_dates[i + 1] if i + 1 < len(ath_dates) else close.index[-1]
-        window = close.loc[start:end]
-        if len(window) < 2:
-            continue
-        trough_val = window.iloc[1:].min()
-        trough_date = window.iloc[1:].idxmin()
-        high = close.loc[start]
-        dd = (high - trough_val) / high * 100
-        if dd >= threshold_pct:
-            episodes.append({"peak_date": start.date(), "trough_date": trough_date.date(),
-                             "peak": float(high), "trough": float(trough_val),
-                             "drawdown_pct": float(dd),
-                             "duration_days": int((trough_date - start).days)})
-    return pd.DataFrame(episodes)
+cells.append(code(SHARED_FIND_CORRECTIONS + r'''
 
 
 spx = get_ohlcv("^GSPC", start=HISTORY_START)["^GSPC"]
@@ -464,12 +468,18 @@ cells.append(md(r"""
 ## Q4 — AMZN earnings surprises
 
 > Load earnings data with `get_earnings_dates()`, compute the 2-day return as
-> `Close_Day3 / Close_Day1 - 1` around each announcement, and answer:
-> **what is the correlation of stock return vs. earnings surprise?**
+> `Close_Day3 / Close_Day1 - 1` around each announcement, then **filter for positive
+> earnings surprises and calculate the median 2-day return** — and after that, the
+> correlation between the 2-day return and the surprise magnitude.
 
-The heading of this question asks for the *median 2-day change after positive
-surprises* while step 4 asks for the *correlation*. Both are printed; the
-correlation is treated as the answer, since it is the numbered step.
+Step 4 originally asked only for "the correlation of a stock return vs. earnings
+surprise", which contradicted this question's own heading. Upstream rewrote it in
+`a5cf53a` to ask for the **median first** and the correlation as a follow-up, so the
+median is the submitted answer and the correlation is printed beneath it.
+
+Upstream also now states the expected shape — **25 entries starting 2020-10-29**, one
+of them a future date with no reported EPS — which is exactly the 24 matched
+announcements below.
 
 Two mechanical details:
 
@@ -520,18 +530,21 @@ print(e[["date", "eps_estimate", "eps_actual", "surprise_pct", "ret_2d_pct"]]
 ''' ))
 
 cells.append(code(r'''
-corr = e["ret_2d_pct"].corr(e["surprise_pct"])
-answer("q4", "Q4 — correlation of 2-day return vs earnings surprise", f"{corr:.4f}",
-       f"Pearson, n = {len(e)}")
-
-# The heading's reading, printed alongside because the question asks both ways.
 positive = e[e["surprise_pct"] > 0]
-print(f"\n[heading's reading] median 2-day return after a positive surprise: "
-      f"{positive['ret_2d_pct'].median():.2f}%  (n = {len(positive)})")
-print(f"[baseline]          median 2-day return over all history: "
+answer("q4", "Q4 — median 2-day return after a positive surprise",
+       f"{positive['ret_2d_pct'].median():.2f}%",
+       f"n = {len(positive)} positive surprises out of {len(e)} announcements")
+
+# Step 4 asks for the correlation immediately after the median, so it is reported
+# too — just not as the graded scalar.
+corr = e["ret_2d_pct"].corr(e["surprise_pct"])
+ANSWERS["q4_corr"] = f"{corr:.4f}"
+print(f"\n[also asked] correlation of 2-day return vs surprise: {corr:.4f} "
+      f"(Pearson, n = {len(e)})")
+print(f"[baseline]   median 2-day return over all history: "
       f"{ret2d.median() * 100:.2f}%")
 
-# Spearman too: one 215% surprise dominates a Pearson correlation on 25 points.
+# Spearman too: a single enormous surprise dominates a Pearson correlation on 24 points.
 print(f"\n[robustness] Spearman rank correlation: "
       f"{e['ret_2d_pct'].corr(e['surprise_pct'], method='spearman'):.4f}")
 print(f"             largest surprise in the sample: {e['surprise_pct'].max():.1f}%")

@@ -80,20 +80,27 @@ python my-notes/tools/build_homework1.py
 cd my-notes/01-intro && jupyter nbconvert --execute --to notebook --inplace homework1.ipynb
 ```
 
-### 2. Finish the Colab check — one click
-The badge is **verified to resolve**: it opens the corrected notebook from `main` in
-Colab, with the new deadline, the form link and the spliced `find_corrections` block
-all rendering correctly.
+### 2. ~~Colab~~ — done, and it is the strongest parity result of the three
+Executed top to bottom in Colab on 2026-08-27, from the badge on `main`. **All four
+answers identical to local and Databricks**, and the Q3 self-check still printed
+`10/10 published corrections reproduced exactly`.
 
-What is **not** verified is executing it there. Colab shows a *"This notebook was not
-authored by Google"* confirmation before running anything from GitHub, and that dialog
-would not take a programmatic click — it wants a real user gesture. So: open the badge,
-click **Run anyway**, and watch it run top to bottom.
+What makes it worth more than a green tick is how *different* the stack underneath was:
 
-That is the last environment-parity claim made by construction rather than execution.
-Expect `environment: colab` in the setup cell and `installing: yfinance`. If it fails,
-the fix belongs in [`tools/build_homework1.py`](tools/build_homework1.py), never in the
-`.ipynb`.
+| | Local | Colab |
+|---|---|---|
+| Python | 3.11.16 | **3.13.15** |
+| pandas | 2.3.3 | **2.2.3** |
+| yfinance | 1.6.0 | **0.2.66** |
+
+Three minor-version gaps, including a yfinance that is a whole major version behind,
+and the answers did not move. "Runs unchanged in three environments" is now measured
+rather than asserted.
+
+One operational note if you automate this: Colab gates any GitHub-loaded notebook
+behind a *"This notebook was not authored by Google"* dialog, and it will not take a
+synthetic click at its coordinates — it needs either a real gesture or a DOM-level
+`.click()` on the button inside the shadow root.
 
 ### 3. Rotate the Databricks service-principal secret
 The last credential job, and it needs you in a console.
@@ -206,7 +213,7 @@ against pinned data instead.
 
 | | Local | Colab | Databricks |
 |---|---|---|---|
-| `01-intro/homework1.ipynb` | **verified** | **badge verified to load the corrected notebook**; execution needs one manual click | **verified**, same answers |
+| `01-intro/homework1.ipynb` | **verified** | **verified 2026-08-27** — same 4 answers on py3.13/pandas 2.2.3/yfinance 0.2.66 | **verified**, same answers |
 | `01-intro/Module_01_Enhanced_Learning_Notebook.ipynb` | works | **verified 2026-08-24** | untested — writes `global_stocks.csv` to cwd, which may not be writable |
 | `lib/corrections.py` + `tests/` | **verified** | n/a | n/a — pure Python, no `spark`/`dbutils`, which is why stock pytest is enough |
 | `databricks/bundle/src/*.py` | no | no | Databricks only — needs `spark`/`dbutils` |

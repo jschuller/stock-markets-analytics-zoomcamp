@@ -95,8 +95,10 @@ databricks bundle run crosscheck_bronze -t free-edition
 ```
 
 `homework1.ipynb` detects which of the three it is running in and installs only
-what is missing. Verified end-to-end on local Jupyter and on Databricks serverless
-— the same notebook returns the same four answers on both.
+what is missing. **Verified end-to-end on all three** — the same notebook returns the
+same four answers on local Jupyter, Google Colab and Databricks serverless, across
+Python 3.11 and 3.13, pandas 2.2 and 2.3, and yfinance 0.2 and 1.6. The stack differs
+by a major version in places; the answers do not move.
 
 ## Field notes
 

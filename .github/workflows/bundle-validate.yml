@@ -29,7 +29,13 @@ concurrency:
 
 jobs:
   validate:
+    # Guard: anyone who forks this fork must not fire jobs at the workspace.
+    if: github.repository == 'jschuller/stock-markets-analytics-zoomcamp'
     runs-on: ubuntu-latest
+    # Credentials are environment secrets of `plan` (no reviewer: validate and plan never change the workspace);
+    # deploy reads its own copy from `free-edition`, which has a required reviewer. Both come from
+    # homelab-governance/infra/databricks-identity (run.sh gh-store mac-claude-desktop).
+    environment: plan
     permissions:
       contents: read
       pull-requests: write      # only for the plan comment below

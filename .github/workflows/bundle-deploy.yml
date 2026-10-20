@@ -36,6 +36,8 @@ jobs:
 
     steps:
       - uses: actions/checkout@fbc6f3992d24b796d5a048ff273f7fcc4a7b6c09 # v5
+        with:
+          persist-credentials: false
 
       # Pin the CLI, do not take latest. setup-cli's default installs whatever is
       # newest, and a newer CLI requests a newer databricks/databricks provider —
